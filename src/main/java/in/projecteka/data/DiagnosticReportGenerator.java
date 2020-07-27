@@ -71,7 +71,7 @@ public class DiagnosticReportGenerator implements DocumentGenerator {
                             .collect(Collectors.toList());
             Bundle.BundleEntryComponent patientEntry = patientEntries.get(0);
             String fileName = String.format("%sDiagnosticReportDoc%s.json",
-                    patientEntry.getResource().getId(), Utils.formatDate(date, "MMddyyyy"));
+                    patientEntry.getResource().getId(), Utils.formatDate(date, "yyyyMMdd"));
             Path path = Paths.get(location.toString(), fileName);
             System.out.println("Saving DiagnosticReport to file:" + path.toString());
             Utils.saveToFile(path, encodedString);
