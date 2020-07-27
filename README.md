@@ -1,6 +1,11 @@
-# hiu-db-initializer
+# EKA Utils
 
-Random Data Generator For Patients.
+## Intention
+- provide useful utilities like data generator
+- provide example code snippets
+ 
+
+### Random Data Generator For Patients.
 takes the following parameters
 - out - the location directory where the file would be placed. Default in /tmp
 - type - PR (Prescription), DR (DiagnosticReport). Must be provided.
