@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = '11'
+
+jar {
+    manifest {
+        attributes('Main-Class': 'in.projecteka.data.Application')
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'ca.uhn.hapi.fhir:hapi-fhir-base:4.2.0'
+    implementation 'ca.uhn.hapi.fhir:hapi-fhir-structures-r4:4.2.0'
+    compileOnly 'org.projectlombok:lombok:1.18.12'
+    annotationProcessor 'org.projectlombok:lombok:1.18.12'
+}

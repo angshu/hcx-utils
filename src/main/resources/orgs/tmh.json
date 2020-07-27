@@ -1,0 +1,31 @@
+{
+  "resourceType": "Organization",
+  "id": "Tmh01",
+  "name": "Tata Memorial Hospital",
+  "alias": [
+    "TMH", "TMC"
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(+91) 022-2417-7000"
+    }
+  ],
+  "address": [
+    {
+      "line": [
+        "Dr Ernest Borges Rd, Parel East, Parel, Mumbai, Maharashtra 400012"
+      ],
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "postalCode": "400012",
+      "country": "INDIA"
+    }
+  ],
+  "endpoint": [
+    {
+      "reference": "https://www.max.in/hospital-network/max-super-speciality-hospital-saket",
+      "display": "Website"
+    }
+  ]
+}
