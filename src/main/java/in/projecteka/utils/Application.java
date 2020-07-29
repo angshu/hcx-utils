@@ -1,4 +1,9 @@
-package in.projecteka.data;
+package in.projecteka.utils;
+
+import in.projecteka.utils.data.DiagnosticReportGenerator;
+import in.projecteka.utils.data.DocumentGenerator;
+import in.projecteka.utils.data.PrescriptionGenerator;
+import in.projecteka.utils.data.Utils;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,13 +32,22 @@ public class Application {
         String patientName = getPatientName(checkRequired("name"));
         Date fromDate = getFromDate(checkRequired("fromDate"));
         int number = getNumerOfInstances(checkRequired("number"));
+        String hip = getHip(checkRequired("hip"));
         DocumentGenerator documentGenerator = generators.get(type);
         documentGenerator.init();
         try {
-            documentGenerator.execute(patientName, fromDate, number, location);
+            documentGenerator.execute(patientName, fromDate, number, location, hip);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static String getHip(String hip) {
+        if (Utils.isBlank(hip)) {
+            System.out.println("hip not provided. Defaulting to max");
+            return "max";
+        }
+        return hip;
     }
 
     private static String getPatientName(String name) {

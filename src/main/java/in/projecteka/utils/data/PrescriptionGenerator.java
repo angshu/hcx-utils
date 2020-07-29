@@ -1,8 +1,8 @@
-package in.projecteka.data;
+package in.projecteka.utils.data;
 
 import ca.uhn.fhir.context.FhirContext;
-import in.projecteka.data.model.Doctor;
-import in.projecteka.data.model.Medicine;
+import in.projecteka.utils.data.model.Doctor;
+import in.projecteka.utils.data.model.Medicine;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -39,20 +39,22 @@ public class PrescriptionGenerator implements DocumentGenerator {
         patients = Utils.loadFromFile("/patients.properties");
     }
 
-    public void execute(String patientName, Date fromDate, int number, Path location) throws Exception {
+    public void execute(String patientName, Date fromDate, int number, Path location, String hipPrefix) throws Exception {
         FhirContext fhirContext = FhirContext.forR4();
         LocalDateTime dateTime = fromDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         for (int i = 0; i < number; i++) {
             Date date = Utils.getNextDate(dateTime, i);
-            Bundle bundle = createPrescriptionBundle(date, patientName, "max");
+            Bundle bundle = createPrescriptionBundle(date, patientName, hipPrefix);
             String encodedString = fhirContext.newJsonParser().encodeResourceToString(bundle);
             List<Bundle.BundleEntryComponent> patientEntries =
                     bundle.getEntry().stream()
                             .filter(e -> e.getResource().getResourceType().equals(ResourceType.Patient))
                             .collect(Collectors.toList());
             Bundle.BundleEntryComponent patientEntry = patientEntries.get(0);
-            String fileName = String.format("%sPrescriptionDoc%s.json",
-                    patientEntry.getResource().getId(), Utils.formatDate(date, "yyyyMMdd"));
+            String fileName = String.format("%s%sPrescriptionDoc%s.json",
+                    hipPrefix.toUpperCase(),
+                    patientEntry.getResource().getId(),
+                    Utils.formatDate(date, "yyyyMMdd"));
             Path path = Paths.get(location.toString(), fileName);
             System.out.println("Saving Prescription to file:" + path.toString());
             Utils.saveToFile(path, encodedString);

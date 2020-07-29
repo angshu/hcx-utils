@@ -1,0 +1,31 @@
+{
+  "resourceType": "Organization",
+  "id": "Wbc01",
+  "name": "Well Being Hospital And Clinic",
+  "alias": [
+    "WBH", "WBC"
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(+91) 044-2417-7000"
+    }
+  ],
+  "address": [
+    {
+      "line": [
+        "99 Greams Lane,Thousand Lights West, Chennai, Tamil Nadu 600006"
+      ],
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "postalCode": "600006",
+      "country": "INDIA"
+    }
+  ],
+  "endpoint": [
+    {
+      "reference": "https://www.wbh.in/",
+      "display": "Website"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
-package in.projecteka.data;
+package in.projecteka.utils.data;
 
-import in.projecteka.data.model.Doctor;
+import in.projecteka.utils.data.model.Doctor;
 import lombok.SneakyThrows;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -65,7 +65,7 @@ public class FHIRUtils {
     }
 
     static Practitioner createAuthor(String hipPrefix, Properties doctors) {
-        String details = (String) doctors.get(String.valueOf(Utils.randomInt(1, 3)));
+        String details = (String) doctors.get(String.valueOf(Utils.randomInt(1, doctors.size())));
         Doctor doc = Doctor.parse(details);
         Practitioner practitioner = new Practitioner();
         practitioner.setId(hipPrefix.toUpperCase() + doc.getDocId());
@@ -79,7 +79,7 @@ public class FHIRUtils {
         if (patientDetail == null) {
             throw new Exception("Can not identify patient with name: " + name);
         }
-        in.projecteka.data.model.Patient patient = in.projecteka.data.model.Patient.parse((String) patientDetail);
+        in.projecteka.utils.data.model.Patient patient = in.projecteka.utils.data.model.Patient.parse((String) patientDetail);
         Patient patientResource = new Patient();
         patientResource.setId(patient.getHid());
         patientResource.setName(Collections.singletonList(getHumanName(patient.getName(), null, null)));

@@ -1,4 +1,4 @@
-package in.projecteka.data;
+package in.projecteka.utils.data;
 
 public class Constants {
     private static final String EKA_SYSTEM = "https://projecteka.in/%s";
