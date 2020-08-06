@@ -69,4 +69,19 @@ public class Utils {
     }
 
 
+    public static Date getPastDate(Date date, int days) {
+        LocalDateTime localDateTime = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+        LocalDateTime newDateTime = localDateTime.minusDays(days);
+        return Date.from(newDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static Date getFutureDate(Date date, int days) {
+        LocalDateTime localDateTime = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+        LocalDateTime newDateTime = localDateTime.plusDays(days);
+        return Date.from(newDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    }
 }

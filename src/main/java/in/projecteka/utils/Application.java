@@ -2,6 +2,7 @@ package in.projecteka.utils;
 
 import in.projecteka.utils.data.DiagnosticReportGenerator;
 import in.projecteka.utils.data.DocumentGenerator;
+import in.projecteka.utils.data.OPConsultationGenerator;
 import in.projecteka.utils.data.PrescriptionGenerator;
 import in.projecteka.utils.data.Utils;
 
@@ -16,10 +17,11 @@ import java.util.List;
 import java.util.Map;
 
 public class Application {
-    private static final List<String> supportedTypes = Arrays.asList("PR", "DR");
+    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP");
     private static final Map<String, DocumentGenerator> generators = new HashMap<>() {{
         put("PR", new PrescriptionGenerator());
         put("DR", new DiagnosticReportGenerator());
+        put("OP", new OPConsultationGenerator());
     }};
 
     public static void main(String[] args) throws Exception {
@@ -33,10 +35,21 @@ public class Application {
         Date fromDate = getFromDate(checkRequired("fromDate"));
         int number = getNumerOfInstances(checkRequired("number"));
         String hip = getHip(checkRequired("hip"));
+        String patientId = checkOptional("id");
+
+        DocRequest request =
+                DocRequest.builder()
+                        .patientName(patientName)
+                        .fromDate(fromDate)
+                        .outPath(location)
+                        .hipPrefix(hip)
+                        .number(number)
+                        .patientId(patientId)
+                        .build();
         DocumentGenerator documentGenerator = generators.get(type);
         documentGenerator.init();
         try {
-            documentGenerator.execute(patientName, fromDate, number, location, hip);
+            documentGenerator.execute(request);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -99,5 +112,9 @@ public class Application {
             System.out.println(String.format("Required property [%s] not set.", name));
         }
         return property;
+    }
+
+    private static String checkOptional(String name) throws Exception {
+        return System.getProperty(name);
     }
 }

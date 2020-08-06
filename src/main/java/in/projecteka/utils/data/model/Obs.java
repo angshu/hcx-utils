@@ -30,7 +30,7 @@ public class Obs {
             "}";
     private static final String temperature = "{\n" +
             "  \"resourceType\": \"Observation\",\n" +
-            "  \"id\": \"2IPDObs1\",\n" +
+            "  \"id\": \"temperature\",\n" +
             "  \"status\": \"final\",\n" +
             "  \"code\": {\n" +
             "    \"text\": \"Temperature\"\n" +
@@ -40,15 +40,55 @@ public class Obs {
             "    \"unit\": \"C\"\n" +
             "  }\n" +
             "}";
+    private static final String pulse = "{\n" +
+            "  \"resourceType\": \"Observation\",\n" +
+            "  \"id\": \"pulse\",\n" +
+            "  \"status\": \"final\",\n" +
+            "  \"code\": {\n" +
+            "    \"text\": \"pulse\"\n" +
+            "  },\n" +
+            "  \"valueString\": \"72 bpm\"" +
+            "}";
+    private static final String rr = "{\n" +
+            "  \"resourceType\": \"Observation\",\n" +
+            "  \"id\": \"rr\",\n" +
+            "  \"status\": \"final\",\n" +
+            "  \"code\": {\n" +
+            "    \"text\": \"respiratory rate\"\n" +
+            "  },\n" +
+            "  \"valueString\": \"14\"" +
+            "}";
+    private static final String bloodPressure = "{\n" +
+            "  \"resourceType\": \"Observation\",\n" +
+            "  \"id\": \"bloodPressure\",\n" +
+            "  \"status\": \"final\",\n" +
+            "  \"code\": {\n" +
+            "    \"text\": \"Blood Pressuree\"\n" +
+            "  },\n" +
+            "  \"valueString\": \"110/77\"" +
+            "}";
 
     private static Map<String, String> obsList = new HashMap<>() {{
        put("1", cholesterol);
        put("2", triglyceride);
        put("3", temperature);
+       put("4", pulse);
+    }};
+
+    private static Map<String, String> commonObs = new HashMap<>() {{
+        put("1", temperature);
+        put("2", pulse);
+        put("3", rr);
+        put("4", bloodPressure);
     }};
 
     public static String getObservationResString() {
         int index = Utils.randomInt(1, obsList.size());
         return obsList.get(String.valueOf(index));
+    }
+
+    public static String getPhysicalObsResString() {
+        int index = Utils.randomInt(1, commonObs.size());
+        return commonObs.get(String.valueOf(index));
     }
 }
