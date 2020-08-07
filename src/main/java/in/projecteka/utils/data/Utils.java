@@ -84,4 +84,12 @@ public class Utils {
         LocalDateTime newDateTime = localDateTime.plusDays(days);
         return Date.from(newDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
+
+    public static Date getFutureTime(Date date, int minutes) {
+        LocalDateTime localDateTime = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+        LocalDateTime newDateTime = localDateTime.plusMinutes(minutes);
+        return Date.from(newDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    }
 }

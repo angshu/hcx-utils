@@ -6,14 +6,19 @@ import in.projecteka.utils.DocRequest;
 import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Medicine;
 import in.projecteka.utils.data.model.Obs;
+import in.projecteka.utils.data.model.SimpleAllergy;
 import in.projecteka.utils.data.model.SimpleCondition;
 import in.projecteka.utils.data.model.SimpleDiagnosticTest;
 import lombok.SneakyThrows;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.AllergyIntolerance;
+import org.hl7.fhir.r4.model.Annotation;
 import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.CarePlan;
 import org.hl7.fhir.r4.model.Composition;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.Encounter;
@@ -24,13 +29,16 @@ import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Practitioner;
+import org.hl7.fhir.r4.model.Procedure;
 import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -121,18 +129,60 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         opDoc.setEncounter(referenceToResource);
 
 
-        createChiefComplaintsSection(bundle, opDoc, patientResource); //DONE
-        createAllergiesSection(bundle, opDoc, patientResource);
-        createMedicalHistorySection(bundle, opDoc, patientResource);
-        createSymptomSection(bundle, opDoc, patientResource);
-        createObservationSection(bundle, opDoc, patientResource, jsonParser);//DONE
-        createInvestigationSection(bundle, opDoc, patientResource);
-        createPrescriptionSection(bundle, opDoc, patientResource);//DONE
-        createDocumentsSection(bundle, opDoc, patientResource);
-        createDiagnosticReportSection(bundle, opDoc, patientResource, jsonParser, hipPrefix);//DONE
+        createChiefComplaintsSection(bundle, opDoc, patientResource);
+        createAllergiesSection(bundle, opDoc, patientResource, jsonParser);
+        createMedicalHistorySection(bundle, opDoc, patientResource); //TODO
+        createSymptomSection(bundle, opDoc, patientResource); //TODO
+        createObservationSection(bundle, opDoc, patientResource, jsonParser);
+        createInvestigationSection(bundle, opDoc, patientResource); //TODO
+        createPrescriptionSection(bundle, opDoc, patientResource);
+        createDocumentsSection(bundle, opDoc, patientResource, hipPrefix);
+        createProcedureSection(bundle, opDoc, patientResource, hipPrefix);
+        createDiagnosticReportSection(bundle, opDoc, patientResource, jsonParser, hipPrefix);
         createPlanSection(bundle, opDoc, patientResource);
-        createFollowupSection(bundle, opDoc, patientResource, hipPrefix);//DONE
+        createFollowupSection(bundle, opDoc, patientResource, hipPrefix);
         return bundle;
+    }
+
+    private void createProcedureSection(Bundle bundle, Composition composition, Patient patient, String hipPrefix) {
+        Composition.SectionComponent section = composition.addSection();
+        section.setTitle("Procedures");
+        section.setCode(FHIRUtils.getProcedureSectionCode());
+        Procedure procedure = new Procedure();
+        procedure.setId(UUID.randomUUID().toString());
+        procedure.setStatus(Procedure.ProcedureStatus.COMPLETED);
+        if (randomBool()) {
+            procedure.setCode(FHIRUtils.getCodeableConcept(
+                    "90105005",
+                    "Biopsy of soft tissue of forearm (Procedure)",
+                    "Biopsy of suspected melanoma L) arm"));
+        } else {
+            procedure.setCode(FHIRUtils.getCodeableConcept(
+                    "232717009",
+                    "Coronary artery bypass grafting",
+                    ""));
+        }
+        procedure.setSubject(FHIRUtils.getReferenceToResource(patient));
+        DateTimeType dateTimeType = new DateTimeType();
+        dateTimeType.setValue(Utils.getFutureTime(composition.getDate(), 60));
+        procedure.setPerformed(dateTimeType);
+        procedure.setAsserter(composition.getAuthorFirstRep());
+        Procedure.ProcedurePerformerComponent performer = procedure.addPerformer();
+        //performer.setActor()
+
+        if (randomBool()) {
+            Practitioner surgeon = FHIRUtils.createAuthor(hipPrefix, doctors);
+            Resource existingResourceInBundle = FHIRUtils.findResourceInBundleById(bundle, ResourceType.Practitioner, surgeon.getId());
+            if (existingResourceInBundle != null) {
+                performer.setActor(FHIRUtils.getReferenceToResource(existingResourceInBundle));
+            } else {
+                FHIRUtils.addToBundleEntry(bundle, surgeon, true);
+                performer.setActor(FHIRUtils.getReferenceToResource(surgeon));
+            }
+        }
+        procedure.setComplication(Collections.singletonList(FHIRUtils.getCodeableConcept("131148009", "Bleeding", null)));
+        FHIRUtils.addToBundleEntry(bundle, procedure, true);
+        section.getEntry().add(FHIRUtils.getReferenceToResource(procedure));
     }
 
     @SneakyThrows
@@ -167,7 +217,37 @@ public class OPConsultationGenerator implements  DocumentGenerator {
 
     @SneakyThrows
     private void createPlanSection(Bundle bundle, Composition composition, Patient patient) {
-        return;
+        Composition.SectionComponent section = composition.addSection();
+        section.setTitle("Care Plan");
+        section.setCode(FHIRUtils.getCarePlanSectionType());
+        CarePlan plan = new CarePlan();
+        plan.setId(UUID.randomUUID().toString());
+        if (randomBool()) {
+            plan.setStatus(CarePlan.CarePlanStatus.ACTIVE);
+            plan.setIntent(CarePlan.CarePlanIntent.PLAN);
+            plan.setTitle("Active Plan for next 2 months");
+        } else {
+            plan.setStatus(CarePlan.CarePlanStatus.DRAFT);
+            plan.setIntent(CarePlan.CarePlanIntent.PROPOSAL);
+            plan.setTitle("Tentative Plan for next 2 months");
+        }
+        plan.setSubject(composition.getSubject());
+        plan.setAuthor(composition.getAuthorFirstRep());
+        plan.setDescription("Actively monitor progress. Review every week to start with. Medications to be revised after 2 weeks.");
+
+        Period period = new Period();
+        period.setStart(composition.getDate());
+        period.setEnd(Utils.getFutureDate(composition.getDate(), 60));
+        plan.setPeriod(period);
+
+        Annotation annotation1 = new Annotation();
+        annotation1.setText("Actively monitor progress.");
+        Annotation annotation2 = new Annotation();
+        annotation2.setText("Review every week to start with. Medications to be revised after 2 weeks.");
+        plan.setNote(Arrays.asList(annotation1, annotation2));
+
+        FHIRUtils.addToBundleEntry(bundle, plan, false);
+        section.getEntry().add(FHIRUtils.getReferenceToResource(plan));
     }
 
     @SneakyThrows
@@ -237,8 +317,22 @@ public class OPConsultationGenerator implements  DocumentGenerator {
     }
 
     @SneakyThrows
-    private void createDocumentsSection(Bundle bundle, Composition composition, Patient patient) {
-        return;
+    private void createDocumentsSection(Bundle bundle, Composition composition, Patient patient, String hipPrefix) {
+        Composition.SectionComponent section = composition.addSection();
+        section.setTitle("Clinical consultation");
+        section.setCode(FHIRUtils.getDocumentReferenceSectionType());
+
+        Practitioner docAuthor = (Practitioner) composition.getAuthorFirstRep().getResource();
+        if (randomBool()) {
+            Practitioner anotherDoc = FHIRUtils.createAuthor(hipPrefix, doctors);
+            if (!isSamePractitioner(anotherDoc, docAuthor)) {
+                FHIRUtils.addToBundleEntry(bundle, anotherDoc, false);
+                docAuthor = anotherDoc;
+            }
+        }
+        DocumentReference docReference = FHIRUtils.getReportAsDocReference(docAuthor);
+        FHIRUtils.addToBundleEntry(bundle, docReference, false);
+        section.getEntry().add(FHIRUtils.getReferenceToResource(docReference));
     }
 
     @SneakyThrows
@@ -297,7 +391,6 @@ public class OPConsultationGenerator implements  DocumentGenerator {
             FHIRUtils.addToBundleEntry(bundle, observation, true);
             section.getEntry().add(FHIRUtils.getReferenceToResource(observation));
         }
-
     }
 
     @SneakyThrows
@@ -306,8 +399,16 @@ public class OPConsultationGenerator implements  DocumentGenerator {
     }
 
     @SneakyThrows
-    private void createAllergiesSection(Bundle bundle, Composition composition, Patient patient) {
-        return;
+    private void createAllergiesSection(Bundle bundle, Composition composition, Patient patient, IParser parser) {
+        Composition.SectionComponent section = composition.addSection();
+        section.setTitle("Allergy Section");
+        section.setCode(FHIRUtils.getAllergySectionType());
+        AllergyIntolerance foodAllergy = SimpleAllergy.getFoodAllergy(parser, composition.getSubject(), composition.getAuthorFirstRep());
+        AllergyIntolerance medicationAllergy = SimpleAllergy.getMedicationAllergy(parser, composition.getSubject(), composition.getAuthorFirstRep());
+        FHIRUtils.addToBundleEntry(bundle, foodAllergy, true);
+        FHIRUtils.addToBundleEntry(bundle, medicationAllergy, true);
+        section.getEntry().add(FHIRUtils.getReferenceToResource(foodAllergy));
+        section.getEntry().add(FHIRUtils.getReferenceToResource(medicationAllergy));
     }
 
     @SneakyThrows

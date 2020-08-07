@@ -4,6 +4,7 @@ import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Medicine;
 import in.projecteka.utils.data.model.SimpleDiagnosticTest;
 import lombok.SneakyThrows;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.Bundle;
@@ -24,6 +25,7 @@ import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
+import org.hl7.fhir.r4.model.ResourceType;
 import org.hl7.fhir.r4.model.StringType;
 
 import java.io.IOException;
@@ -33,6 +35,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static in.projecteka.utils.data.Constants.EKA_LOINC_SYSTEM;
 import static in.projecteka.utils.data.Utils.randomBool;
@@ -142,12 +145,38 @@ public class FHIRUtils {
         return prescriptionType;
     }
 
+    static CodeableConcept getDocumentReferenceSectionType() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode("371530004");
+        coding.setDisplay("Clinical consultation report");
+        return type;
+    }
+
+    static CodeableConcept getCarePlanSectionType() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode("734163000");
+        coding.setDisplay("Care Plan");
+        return type;
+    }
+
     static CodeableConcept getChiefComplaintSectionType() {
         CodeableConcept type = new CodeableConcept();
         Coding coding = type.addCoding();
         coding.setSystem(Constants.EKA_SCT_SYSTEM);
         coding.setCode("422843007");
         coding.setDisplay("Chief Complaint Section");
+        return type;
+    }
+    static CodeableConcept getAllergySectionType() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode("722446000");
+        coding.setDisplay("Allergy Record");
         return type;
     }
 
@@ -338,16 +367,25 @@ public class FHIRUtils {
         coding.setDisplay("Follow up");
         return type;
     }
+    public static CodeableConcept getProcedureSectionCode() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode("371525003");
+        coding.setDisplay("Clinical procedure report");
+        return type;
+    }
 
     static Appointment createAppointment(Reference participantRef, Date apptDate) {
         Appointment app = new Appointment();
         app.setId(UUID.randomUUID().toString());
+        app.setStart(apptDate);
         if (randomBool()) {
             app.setStatus(Appointment.AppointmentStatus.PROPOSED);
         } else {
             app.setStatus(Appointment.AppointmentStatus.BOOKED);
+            app.setEnd(Utils.getFutureTime(apptDate, 30));
         }
-        app.setStart(apptDate);
         Appointment.AppointmentParticipantComponent participant = app.addParticipant();
         participant.setActor(participantRef);
         if (app.getStatus().equals(Appointment.AppointmentStatus.BOOKED)) {
@@ -357,5 +395,30 @@ public class FHIRUtils {
         }
         app.setDescription("Review progress in 7 days");
         return app;
+    }
+
+    public static CodeableConcept getCodeableConcept(String code, String display, String text) {
+        CodeableConcept procedureCode = new CodeableConcept();
+        Coding coding = procedureCode.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode(code);
+        coding.setDisplay(display);
+        if (!Utils.isBlank(text)) {
+            procedureCode.setText(text);
+        }
+        return procedureCode;
+    }
+
+    public static Resource findResourceInBundleById(Bundle bundle, ResourceType resourceType, String id) {
+        var resources = bundle.getEntry().stream().filter(entry -> {
+            if (entry.getResource().getResourceType().equals(resourceType)) {
+                return entry.getResource().getId().equals(id);
+            }
+            return false;
+        }).collect(Collectors.toList());
+        if (!resources.isEmpty()) {
+            return resources.get(0).getResource();
+        }
+        return null;
     }
 }
