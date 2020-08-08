@@ -16,6 +16,7 @@ import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
 
 import java.nio.file.Path;
@@ -118,7 +119,12 @@ public class DiagnosticReportGenerator implements DocumentGenerator {
         Practitioner interpreter = author;
         if (randomBool()) {
             interpreter = FHIRUtils.createAuthor(hipPrefix, doctors);
-            FHIRUtils.addToBundleEntry(bundle, interpreter, false);
+            Practitioner doctor = (Practitioner) FHIRUtils.findResourceInBundleById(bundle, ResourceType.Practitioner, interpreter.getId());
+            if (doctor == null) {
+                FHIRUtils.addToBundleEntry(bundle, interpreter, false);
+            } else {
+                interpreter = doctor;
+            }
         }
         report.setResultsInterpreter(Collections.singletonList(FHIRUtils.getReferenceToResource(interpreter)));
         report.setCode(FHIRUtils.getDiagnosticTestCode(SimpleDiagnosticTest.getRandomTest()));

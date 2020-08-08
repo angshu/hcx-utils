@@ -15,4 +15,5 @@ public class DocRequest {
     private int number;
     private String hipPrefix;
     private Path outPath;
+    private String type;
 }

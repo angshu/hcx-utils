@@ -2,6 +2,7 @@ package in.projecteka.utils.data;
 
 import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Medicine;
+import in.projecteka.utils.data.model.SimpleCondition;
 import in.projecteka.utils.data.model.SimpleDiagnosticTest;
 import lombok.SneakyThrows;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -38,6 +39,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static in.projecteka.utils.data.Constants.EKA_LOINC_SYSTEM;
+import static in.projecteka.utils.data.Constants.EKA_SCT_SYSTEM;
+import static in.projecteka.utils.data.Constants.FHIR_CONDITION_CATEGORY_SYSTEM;
+import static in.projecteka.utils.data.Constants.FHIR_CONDITION_CLINICAL_STATUS_SYSTEM;
+import static in.projecteka.utils.data.Utils.getPastDate;
 import static in.projecteka.utils.data.Utils.randomBool;
 
 public class FHIRUtils {
@@ -226,6 +231,15 @@ public class FHIRUtils {
         return type;
     }
 
+    public static CodeableConcept getDischargeSummaryType() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode("373942005");
+        coding.setDisplay("Discharge Summary Record");
+        return type;
+    }
+
     static Condition getCondition(String medCondition) {
         if (Utils.randomBool()) {
             Condition condition = new Condition();
@@ -384,8 +398,8 @@ public class FHIRUtils {
             app.setStatus(Appointment.AppointmentStatus.PROPOSED);
         } else {
             app.setStatus(Appointment.AppointmentStatus.BOOKED);
-            app.setEnd(Utils.getFutureTime(apptDate, 30));
         }
+        app.setEnd(Utils.getFutureTime(apptDate, 30));
         Appointment.AppointmentParticipantComponent participant = app.addParticipant();
         participant.setActor(participantRef);
         if (app.getStatus().equals(Appointment.AppointmentStatus.BOOKED)) {
@@ -420,5 +434,54 @@ public class FHIRUtils {
             return resources.get(0).getResource();
         }
         return null;
+    }
+
+    static Condition createCondition(SimpleCondition randomComplaint, Date date) {
+        Condition condition = new Condition();
+        condition.setId(UUID.randomUUID().toString());
+        if (randomBool()) {
+            condition.setClinicalStatus(
+                    conceptWith(
+                            randomComplaint.getClinicalStatus(),
+                            randomComplaint.getClinicalStatus(),
+                            FHIR_CONDITION_CLINICAL_STATUS_SYSTEM));
+        }
+        condition.setCode(conceptWith(randomComplaint.getText(), randomComplaint.getCode(), EKA_SCT_SYSTEM));
+        condition.setCategory(Collections.singletonList(conceptWith(randomComplaint.getCategory(),
+                randomComplaint.getCategoryCode(), FHIR_CONDITION_CATEGORY_SYSTEM)));
+        condition.setSeverity(conceptWith(randomComplaint.getSeverity(), randomComplaint.getSeverityCode(), EKA_SCT_SYSTEM));
+        if (randomBool()) {
+            condition.setRecordedDate(date);
+        }
+        if (randomBool()) {
+            Date onsetDate = getPastDate(date, 30);
+            if (randomBool()) {
+                condition.setOnset(getDateTimeType(onsetDate));
+            } else {
+                Period period = getPeriod(onsetDate, null);
+                condition.setOnset(period);
+            }
+        }
+        return condition;
+    }
+
+    static Condition createEncounterDiagnosis(SimpleCondition randomComplaint, Date date) {
+        Condition condition = new Condition();
+        condition.setId(UUID.randomUUID().toString());
+        if (randomBool()) {
+            condition.setClinicalStatus(
+                    conceptWith(
+                            randomComplaint.getClinicalStatus(),
+                            randomComplaint.getClinicalStatus(),
+                            FHIR_CONDITION_CLINICAL_STATUS_SYSTEM));
+        }
+        condition.setCode(conceptWith(randomComplaint.getText(), randomComplaint.getCode(), EKA_SCT_SYSTEM));
+        condition.setCategory(Collections.singletonList(conceptWith(randomComplaint.getCategory(),
+                randomComplaint.getCategoryCode(), FHIR_CONDITION_CATEGORY_SYSTEM)));
+        condition.setSeverity(conceptWith(randomComplaint.getSeverity(), randomComplaint.getSeverityCode(), EKA_SCT_SYSTEM));
+        if (randomBool()) {
+            condition.setRecordedDate(date);
+        }
+        return condition;
     }
 }

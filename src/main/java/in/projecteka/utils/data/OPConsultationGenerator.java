@@ -16,6 +16,7 @@ import org.hl7.fhir.r4.model.Annotation;
 import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CarePlan;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Composition;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.DateTimeType;
@@ -33,7 +34,9 @@ import org.hl7.fhir.r4.model.Procedure;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
+import org.hl7.fhir.r4.model.Type;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -46,15 +49,10 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static in.projecteka.utils.data.Constants.EKA_SCT_SYSTEM;
-import static in.projecteka.utils.data.Constants.FHIR_CONDITION_CATEGORY_SYSTEM;
-import static in.projecteka.utils.data.Constants.FHIR_CONDITION_CLINICAL_STATUS_SYSTEM;
-import static in.projecteka.utils.data.FHIRUtils.getDateTimeType;
 import static in.projecteka.utils.data.FHIRUtils.getDiagnosticTestCode;
 import static in.projecteka.utils.data.FHIRUtils.getMedication;
 import static in.projecteka.utils.data.FHIRUtils.getReportAsDocReference;
 import static in.projecteka.utils.data.FHIRUtils.getSurgicalReportAsAttachment;
-import static in.projecteka.utils.data.Utils.getPastDate;
 import static in.projecteka.utils.data.Utils.randomBool;
 
 public class OPConsultationGenerator implements  DocumentGenerator {
@@ -74,23 +72,35 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         FhirContext fhirContext = FhirContext.forR4();
         LocalDateTime dateTime = request.getFromDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         for (int i = 0; i < request.getNumber(); i++) {
-            Date date = Utils.getNextDate(dateTime, i);
-            Bundle bundle = createOPConsultationBundle(date, request.getPatientName(), request.getHipPrefix(), fhirContext.newJsonParser(), request.getPatientId());
+            Date docDate = getCompositionDate(dateTime, i);
+            Bundle bundle = createOPConsultationBundle(docDate, request.getPatientName(), request.getHipPrefix(), fhirContext.newJsonParser(), request.getPatientId());
             String encodedString = fhirContext.newJsonParser().encodeResourceToString(bundle);
             List<Bundle.BundleEntryComponent> patientEntries =
                     bundle.getEntry().stream()
                             .filter(e -> e.getResource().getResourceType().equals(ResourceType.Patient))
                             .collect(Collectors.toList());
             Bundle.BundleEntryComponent patientEntry = patientEntries.get(0);
-            String fileName = String.format("%s%sOPConsultationDoc%s.json",
-                    request.getHipPrefix().toUpperCase(),
-                    patientEntry.getResource().getId(),
-                    Utils.formatDate(date, "yyyyMMdd"));
-            Path path = Paths.get(request.getOutPath().toString(), fileName);
-            System.out.println("Saving OP Consultation to file:" + path.toString());
+            Path path = getFileSavePath(request, docDate, patientEntry);
+            System.out.println("Saving " + request.getType() +  " Document to file:" + path.toString());
             Utils.saveToFile(path, encodedString);
             //System.out.println(encodedString);
         }
+    }
+
+    protected Date getCompositionDate(LocalDateTime dateTime, int docIndex) {
+        return Utils.getFutureDate(dateTime, docIndex*2);
+    }
+
+    private Path getFileSavePath(DocRequest request, Date date, Bundle.BundleEntryComponent patientEntry) {
+        String fileName = String.format("%s%s" + getDocBasicName() + "%s.json",
+                request.getHipPrefix().toUpperCase(),
+                patientEntry.getResource().getId(),
+                Utils.formatDate(date, "yyyyMMdd"));
+        return Paths.get(request.getOutPath().toString(), fileName);
+    }
+
+    protected String getDocBasicName() {
+        return "OPConsultationDoc";
     }
 
     @SneakyThrows
@@ -102,8 +112,8 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         opDoc.setDate(bundle.getTimestamp());
         opDoc.setIdentifier(FHIRUtils.getIdentifier(opDoc.getId(), hipPrefix, "document"));
         opDoc.setStatus(Composition.CompositionStatus.FINAL);
-        opDoc.setType(FHIRUtils.getOPConsultationType());
-        opDoc.setTitle("OP Consultation Document");
+        opDoc.setType(getDocumentType());
+        opDoc.setTitle(getCompositionDocumentTitle());
         FHIRUtils.addToBundleEntry(bundle, opDoc, false);
         Practitioner author = FHIRUtils.createAuthor(hipPrefix, doctors);
         FHIRUtils.addToBundleEntry(bundle, author, false);
@@ -122,13 +132,21 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         FHIRUtils.addToBundleEntry(bundle, patientResource, false);
         opDoc.setSubject(FHIRUtils.getReferenceToPatient(patientResource));
 
-        Encounter encounter = FHIRUtils.createEncounter("Outpatient visit", "AMB", opDoc.getDate());
-        encounter.setSubject(FHIRUtils.getReferenceToPatient(patientResource));
+        Reference patientRef = FHIRUtils.getReferenceToPatient(patientResource);
+        Encounter encounter = getCompositionEncounter(opDoc, bundle, patientRef);
         FHIRUtils.addToBundleEntry(bundle, encounter, false);
         Reference referenceToResource = FHIRUtils.getReferenceToResource(encounter);
         opDoc.setEncounter(referenceToResource);
 
+        generateSections(hipPrefix, jsonParser, bundle, opDoc, patientResource);
+        return bundle;
+    }
 
+    protected String getCompositionDocumentTitle() {
+        return "OP Consultation Document";
+    }
+
+    protected void generateSections(String hipPrefix, IParser jsonParser, Bundle bundle, Composition opDoc, Patient patientResource) {
         createChiefComplaintsSection(bundle, opDoc, patientResource);
         createAllergiesSection(bundle, opDoc, patientResource, jsonParser);
         createMedicalHistorySection(bundle, opDoc, patientResource); //TODO
@@ -141,10 +159,19 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         createDiagnosticReportSection(bundle, opDoc, patientResource, jsonParser, hipPrefix);
         createPlanSection(bundle, opDoc, patientResource);
         createFollowupSection(bundle, opDoc, patientResource, hipPrefix);
-        return bundle;
     }
 
-    private void createProcedureSection(Bundle bundle, Composition composition, Patient patient, String hipPrefix) {
+    protected CodeableConcept getDocumentType() {
+        return FHIRUtils.getOPConsultationType();
+    }
+
+    protected Encounter getCompositionEncounter(Composition opDoc, Bundle bundle, Reference patientRef) {
+        Encounter encounter = FHIRUtils.createEncounter("Outpatient visit", "AMB", opDoc.getDate());
+        encounter.setSubject(patientRef);
+        return encounter;
+    }
+
+    protected void createProcedureSection(Bundle bundle, Composition composition, Patient patient, String hipPrefix) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Procedures");
         section.setCode(FHIRUtils.getProcedureSectionCode());
@@ -163,9 +190,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
                     ""));
         }
         procedure.setSubject(FHIRUtils.getReferenceToResource(patient));
-        DateTimeType dateTimeType = new DateTimeType();
-        dateTimeType.setValue(Utils.getFutureTime(composition.getDate(), 60));
-        procedure.setPerformed(dateTimeType);
+        procedure.setPerformed(getProcedureDate(composition));
         procedure.setAsserter(composition.getAuthorFirstRep());
         Procedure.ProcedurePerformerComponent performer = procedure.addPerformer();
         //performer.setActor()
@@ -185,25 +210,32 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         section.getEntry().add(FHIRUtils.getReferenceToResource(procedure));
     }
 
+    protected DateTimeType getProcedureDate(Composition composition) {
+        DateTimeType dateTimeType = new DateTimeType();
+        dateTimeType.setValue(Utils.getFutureTime(composition.getDate(), 60));
+        return dateTimeType;
+    }
+
     @SneakyThrows
-    private void createFollowupSection(Bundle bundle, Composition composition, Patient patient, String hipPrefix) {
+    protected void createFollowupSection(Bundle bundle, Composition composition, Patient patient, String hipPrefix) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Follow up");
         section.setCode(FHIRUtils.getFollowupSectionCode());
         Reference docRef = composition.getAuthor().get(0);
-        Appointment app = FHIRUtils.createAppointment(docRef, Utils.getFutureDate(composition.getDate(), 7));
+        Appointment app = FHIRUtils.createAppointment(docRef, getAppointmentDate(composition));
         if (randomBool()) {
             Practitioner anotherDoc = FHIRUtils.createAuthor(hipPrefix, doctors);
-            var prevDoc = ((Practitioner) docRef.getResource());
-            if (!isSamePractitioner(anotherDoc, prevDoc)) {
+            Resource doctor = FHIRUtils.findResourceInBundleById(bundle, ResourceType.Practitioner, anotherDoc.getId());
+            if (doctor == null) {
                 FHIRUtils.addToBundleEntry(bundle, anotherDoc, true);
-                Appointment.AppointmentParticipantComponent participant = app.addParticipant();
-                participant.setActor(FHIRUtils.getReferenceToResource(anotherDoc));
-                if (app.getStatus().equals(Appointment.AppointmentStatus.BOOKED)) {
-                    participant.setStatus(Appointment.ParticipationStatus.ACCEPTED);
-                } else {
-                    participant.setStatus(Appointment.ParticipationStatus.TENTATIVE);
-                }
+                doctor = anotherDoc;
+            }
+            Appointment.AppointmentParticipantComponent participant = app.addParticipant();
+            participant.setActor(FHIRUtils.getReferenceToResource(doctor));
+            if (app.getStatus().equals(Appointment.AppointmentStatus.BOOKED)) {
+                participant.setStatus(Appointment.ParticipationStatus.ACCEPTED);
+            } else {
+                participant.setStatus(Appointment.ParticipationStatus.TENTATIVE);
             }
         }
 
@@ -211,12 +243,12 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         section.getEntry().add(FHIRUtils.getReferenceToResource(app));
     }
 
-    private boolean isSamePractitioner(Practitioner old, Practitioner newDoc) {
-        return old.getId().equals(newDoc.getId());
+    protected Date getAppointmentDate(Composition composition) {
+        return Utils.getFutureDate(composition.getDate(), 7);
     }
 
     @SneakyThrows
-    private void createPlanSection(Bundle bundle, Composition composition, Patient patient) {
+    protected void createPlanSection(Bundle bundle, Composition composition, Patient patient) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Care Plan");
         section.setCode(FHIRUtils.getCarePlanSectionType());
@@ -251,7 +283,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
     }
 
     @SneakyThrows
-    private void createDiagnosticReportSection(Bundle bundle, Composition composition, Patient patient, IParser jsonParser, String hipPrefix) {
+    protected void createDiagnosticReportSection(Bundle bundle, Composition composition, Patient patient, IParser jsonParser, String hipPrefix) {
         if (randomBool()) return; //dont need diagnosticReport always
 
         Composition.SectionComponent section = composition.addSection();
@@ -288,11 +320,14 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         report.setPerformer(Collections.singletonList(organizationRef));
 
         Practitioner interpreter = FHIRUtils.createAuthor(hipPrefix, doctors);
-        var docAuthor = ((Practitioner) composition.getAuthor().get(0).getResource());
-        if (!isSamePractitioner(interpreter, docAuthor)) {
+        Resource doctor = FHIRUtils.findResourceInBundleById(bundle, ResourceType.Practitioner, interpreter.getId());
+        if (doctor == null) {
             FHIRUtils.addToBundleEntry(bundle, interpreter, false);
+            doctor = interpreter;
+        } else {
+            doctor = ((Practitioner) composition.getAuthor().get(0).getResource());
         }
-        report.setResultsInterpreter(Collections.singletonList(FHIRUtils.getReferenceToResource(interpreter)));
+        report.setResultsInterpreter(Collections.singletonList(FHIRUtils.getReferenceToResource(doctor)));
         report.setCode(getDiagnosticTestCode(SimpleDiagnosticTest.getRandomTest()));
 
         if (randomBool()) {
@@ -317,7 +352,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
     }
 
     @SneakyThrows
-    private void createDocumentsSection(Bundle bundle, Composition composition, Patient patient, String hipPrefix) {
+    protected void createDocumentsSection(Bundle bundle, Composition composition, Patient patient, String hipPrefix) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Clinical consultation");
         section.setCode(FHIRUtils.getDocumentReferenceSectionType());
@@ -325,7 +360,8 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         Practitioner docAuthor = (Practitioner) composition.getAuthorFirstRep().getResource();
         if (randomBool()) {
             Practitioner anotherDoc = FHIRUtils.createAuthor(hipPrefix, doctors);
-            if (!isSamePractitioner(anotherDoc, docAuthor)) {
+            Practitioner doctor = (Practitioner) FHIRUtils.findResourceInBundleById(bundle, ResourceType.Practitioner, anotherDoc.getId());
+            if (doctor == null) {
                 FHIRUtils.addToBundleEntry(bundle, anotherDoc, false);
                 docAuthor = anotherDoc;
             }
@@ -336,10 +372,10 @@ public class OPConsultationGenerator implements  DocumentGenerator {
     }
 
     @SneakyThrows
-    private void createPrescriptionSection(Bundle bundle, Composition composition, Patient patient) {
+    protected void createPrescriptionSection(Bundle bundle, Composition composition, Patient patient) {
         int numberOfMeds = Utils.randomInt(1, 3);
         Composition.SectionComponent section = composition.addSection();
-        section.setTitle("Medications");
+        section.setTitle(getMedicationSectionsTitle());
         section.setCode(FHIRUtils.getPrescriptionSectionType());
 
         Reference referenceToPatient = FHIRUtils.getReferenceToPatient(patient);
@@ -358,7 +394,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
             }
             MedicationRequest medReq = FHIRUtils.createMedicationRequest(
                     getPractitioner(composition),
-                    composition.getDate(),
+                    getMedicationDate(composition),
                     med,
                     medication,
                     condition,
@@ -369,37 +405,52 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         }
     }
 
+    protected Date getMedicationDate(Composition composition) {
+        return composition.getDate();
+    }
+
+    protected String getMedicationSectionsTitle() {
+        return "Prescription";
+    }
+
     private Practitioner getPractitioner(Composition composition) {
         IBaseResource resource = composition.getAuthor().get(0).getResource();
         return (Practitioner) resource;
     }
 
     @SneakyThrows
-    private void createInvestigationSection(Bundle bundle, Composition composition, Patient patient) {
+    protected void createInvestigationSection(Bundle bundle, Composition composition, Patient patient) {
         return;
     }
 
     @SneakyThrows
-    private void createObservationSection(Bundle bundle, Composition composition, Patient patient, IParser parser) {
+    protected void createObservationSection(Bundle bundle, Composition composition, Patient patient, IParser parser) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Physical Examination");
         section.setCode(FHIRUtils.getPhysicalExaminationSectionCode());
         int numOfObs = Utils.randomInt(1,3);
         for (int i = 0; i < numOfObs; i++) {
             Observation observation = parser.parseResource(Observation.class, Obs.getPhysicalObsResString());
+            observation.setEffective(getEffectiveObservationDate(composition, i));
             observation.setId(UUID.randomUUID().toString());
             FHIRUtils.addToBundleEntry(bundle, observation, true);
             section.getEntry().add(FHIRUtils.getReferenceToResource(observation));
         }
     }
 
+    protected Type getEffectiveObservationDate(Composition composition, int index) {
+        DateTimeType dateTimeType = new DateTimeType();
+        dateTimeType.setValue(composition.getDate());
+        return dateTimeType;
+    }
+
     @SneakyThrows
-    private void createSymptomSection(Bundle bundle, Composition composition, Patient patient) {
+    protected void createSymptomSection(Bundle bundle, Composition composition, Patient patient) {
         return;
     }
 
     @SneakyThrows
-    private void createAllergiesSection(Bundle bundle, Composition composition, Patient patient, IParser parser) {
+    protected void createAllergiesSection(Bundle bundle, Composition composition, Patient patient, IParser parser) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Allergy Section");
         section.setCode(FHIRUtils.getAllergySectionType());
@@ -412,53 +463,33 @@ public class OPConsultationGenerator implements  DocumentGenerator {
     }
 
     @SneakyThrows
-    private void createMedicalHistorySection(Bundle bundle, Composition composition, Patient patient) {
+    protected void createMedicalHistorySection(Bundle bundle, Composition composition, Patient patient) {
         return;
     }
 
     @SneakyThrows
-    private void createChiefComplaintsSection(Bundle bundle, Composition composition, Patient patient) {
+    protected void createChiefComplaintsSection(Bundle bundle, Composition composition, Patient patient) {
         int numberOfComplaints = Utils.randomInt(1, 3);
         Composition.SectionComponent section = composition.addSection();
-        section.setTitle("Chief Complaints");
+        section.setTitle(getComplaintsSectionTitle());
         section.setCode(FHIRUtils.getChiefComplaintSectionType());
 
         Reference referenceToPatient = FHIRUtils.getReferenceToPatient(patient);
         for (int i = 0; i < numberOfComplaints; i++) {
-            Condition condition = createCondition(SimpleCondition.getRandomComplaint(), composition.getDate());
+            Condition condition = FHIRUtils.createCondition(SimpleCondition.getRandomComplaint(), getComplaintDate(composition));
             condition.setSubject(referenceToPatient);
             FHIRUtils.addToBundleEntry(bundle, condition, false);
             section.getEntry().add(FHIRUtils.getReferenceToResource(condition));
         }
     }
 
-    private Condition createCondition(SimpleCondition randomComplaint, Date date) {
-        Condition condition = new Condition();
-        condition.setId(UUID.randomUUID().toString());
-        if (randomBool()) {
-            condition.setClinicalStatus(
-                    FHIRUtils.conceptWith(
-                            randomComplaint.getClinicalStatus(),
-                            randomComplaint.getClinicalStatus(),
-                            FHIR_CONDITION_CLINICAL_STATUS_SYSTEM));
-        }
-        condition.setCode(FHIRUtils.conceptWith(randomComplaint.getText(), randomComplaint.getCode(), EKA_SCT_SYSTEM));
-        condition.setCategory(Collections.singletonList(FHIRUtils.conceptWith(randomComplaint.getCategory(),
-                randomComplaint.getCategoryCode(), FHIR_CONDITION_CATEGORY_SYSTEM)));
-        condition.setSeverity(FHIRUtils.conceptWith(randomComplaint.getSeverity(), randomComplaint.getSeverityCode(), EKA_SCT_SYSTEM));
-        if (randomBool()) {
-            condition.setRecordedDate(date);
-        }
-        if (randomBool()) {
-            Date onsetDate = getPastDate(date, 30);
-            if (randomBool()) {
-                condition.setOnset(getDateTimeType(onsetDate));
-            } else {
-                Period period = FHIRUtils.getPeriod(onsetDate, null);
-                condition.setOnset(period);
-            }
-        }
-        return condition;
+    private Date getComplaintDate(Composition composition) {
+        Encounter encounter = (Encounter) composition.getEncounter().getResource();
+        return encounter.getPeriod().getStart();
+    }
+
+    protected String getComplaintsSectionTitle() {
+        return "Chief Complaints";
     }
 
     private void addObservvationsToBundle(IParser parser, Bundle bundle, DiagnosticReport report) {

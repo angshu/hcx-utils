@@ -33,6 +33,12 @@ public class SimpleCondition {
         put("8", new SimpleCondition("Retropharyngeal abscess", "18099001", "Mild to moderate", "371923003", "Encounter Diagnosis", "encounter-diagnosis", "relapse"));
     }};
 
+    private static Map<String, SimpleCondition> diagnosesForHospitalization = new HashMap<>() {{
+        put("1", new SimpleCondition("Bacterial infection due to Bacillus", "128944008", "Mild", "", "Encounter Diagnosis", "encounter-diagnosis", "recurrence"));
+        put("2", new SimpleCondition("Acute gastritis", "25458004", "Severe", "24484000",  "Encounter Diagnosis", "encounter-diagnosis", "recurrence"));
+        put("3", new SimpleCondition("Fracture of ankle", "16114001", "Severe", "24484000",  "Encounter Diagnosis", "encounter-diagnosis", "recurrence"));
+    }};
+
     public static SimpleCondition getRandomCondition() {
         int index = Utils.randomInt(1, tests.size());
         return tests.get(String.valueOf(index));
@@ -41,5 +47,9 @@ public class SimpleCondition {
     public static SimpleCondition getRandomComplaint() {
         int index = Utils.randomInt(1, 4);
         return tests.get(String.valueOf(index));
+    }
+
+    public static SimpleCondition getRandomHospitalizationReason() {
+        return diagnosesForHospitalization.get(String.valueOf(Utils.randomInt(1, diagnosesForHospitalization.size())));
     }
 }
