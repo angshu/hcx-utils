@@ -1,11 +1,11 @@
 package in.projecteka.utils.data;
 
 import in.projecteka.utils.data.model.Doctor;
+import in.projecteka.utils.data.model.Vaccine;
 import in.projecteka.utils.data.model.Medicine;
 import in.projecteka.utils.data.model.SimpleCondition;
 import in.projecteka.utils.data.model.SimpleDiagnosticTest;
 import lombok.SneakyThrows;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.Bundle;
@@ -18,6 +18,7 @@ import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Immunization;
 import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Meta;
@@ -144,6 +145,15 @@ public class FHIRUtils {
         return type;
     }
 
+    static CodeableConcept getImmunizationType() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode("41000179103");
+        coding.setDisplay("Immunization record");
+        return type;
+    }
+
     static CodeableConcept getPrescriptionSectionType() {
         CodeableConcept prescriptionType = getPrescriptionType();
         prescriptionType.getCodingFirstRep().setDisplay("Prescription");
@@ -266,6 +276,23 @@ public class FHIRUtils {
         }
         medication.setCode(concept);
         return medication;
+    }
+
+    static Immunization getImmunization(Vaccine vaccine) {
+        Immunization immunization = new Immunization();
+        immunization.setId(UUID.randomUUID().toString());
+        CodeableConcept concept = new CodeableConcept();
+        if (Utils.randomBool()) {
+            concept.setText(vaccine.getName());
+        } else {
+            Coding coding = concept.addCoding();
+            coding.setSystem(Constants.EKA_ACT_SYSTEM);
+            coding.setCode(vaccine.getCode());
+            coding.setDisplay(vaccine.getName());
+        }
+        immunization.setVaccineCode(concept);
+        immunization.setStatus(Immunization.ImmunizationStatus.COMPLETED);
+        return immunization;
     }
 
     static MedicationRequest createMedicationRequest(Practitioner author,
