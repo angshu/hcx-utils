@@ -6,6 +6,8 @@ import in.projecteka.utils.data.model.Medicine;
 import in.projecteka.utils.data.model.SimpleCondition;
 import in.projecteka.utils.data.model.SimpleDiagnosticTest;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.Bundle;
@@ -24,6 +26,7 @@ import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Period;
+import org.hl7.fhir.r4.model.PositiveIntType;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
@@ -278,7 +281,7 @@ public class FHIRUtils {
         return medication;
     }
 
-    static Immunization getImmunization(Vaccine vaccine) {
+    static Immunization getImmunization(Vaccine vaccine, Date date, String orgPrefix) {
         Immunization immunization = new Immunization();
         immunization.setId(UUID.randomUUID().toString());
         CodeableConcept concept = new CodeableConcept();
@@ -290,7 +293,31 @@ public class FHIRUtils {
             coding.setCode(vaccine.getCode());
             coding.setDisplay(vaccine.getName());
         }
+        DateTimeType dateTimeType = new DateTimeType();
+        dateTimeType.setValue(Utils.getFutureTime(date, 60));
+        immunization.setOccurrence(dateTimeType);
         immunization.setVaccineCode(concept);
+
+        if (Utils.randomBool()){
+            immunization.setLotNumber(RandomStringUtils.randomAlphanumeric(7).toUpperCase());
+        }
+        int randomInt = RandomUtils.nextInt(1, 4);
+        if (randomInt == 1){
+            PositiveIntType doseNumber = new PositiveIntType(RandomUtils.nextInt(2, 5));
+            var protocolApplied = new Immunization.ImmunizationProtocolAppliedComponent(doseNumber);
+            immunization.addProtocolApplied(protocolApplied);
+        }else if (randomInt == 2){
+            StringType doseNumber = new StringType("2nd");
+            var protocolApplied = new Immunization.ImmunizationProtocolAppliedComponent(doseNumber);
+            immunization.addProtocolApplied(protocolApplied);
+        }
+
+        CodeableConcept dogBite = FHIRUtils.getCodeableConcept("217697000", "Dog Bite", null);
+        immunization.addReasonCode(dogBite);
+
+        CodeableConcept route = FHIRUtils.getCodeableConcept("47625008", " Intravenous route", null);
+        immunization.setRoute(route);
+
         immunization.setStatus(Immunization.ImmunizationStatus.COMPLETED);
         return immunization;
     }
@@ -367,15 +394,15 @@ public class FHIRUtils {
         return concept;
     }
 
-    static Attachment getSurgicalReportAsAttachment() throws IOException {
+    static Attachment getSurgicalReportAsAttachment(String title) throws IOException {
         Attachment attachment = new Attachment();
-        attachment.setTitle("Surgical Pathology Report");
+        attachment.setTitle(title);
         attachment.setContentType("application/pdf");
         attachment.setData(Utils.readFileContent("/sample-prescription-base64.txt"));
         return attachment;
     }
 
-    static DocumentReference getReportAsDocReference(Practitioner author) throws IOException {
+    static DocumentReference getReportAsDocReference(Practitioner author, String attachmentTitle) throws IOException {
         DocumentReference documentReference = new DocumentReference();
         documentReference.setStatus(Enumerations.DocumentReferenceStatus.CURRENT);
         documentReference.setId(UUID.randomUUID().toString());
@@ -388,7 +415,7 @@ public class FHIRUtils {
         documentReference.setType(concept);
         documentReference.setAuthor(Collections.singletonList(getReferenceToResource(author)));
         DocumentReference.DocumentReferenceContentComponent content = documentReference.addContent();
-        content.setAttachment(getSurgicalReportAsAttachment());
+        content.setAttachment(getSurgicalReportAsAttachment(attachmentTitle));
         return  documentReference;
     }
 

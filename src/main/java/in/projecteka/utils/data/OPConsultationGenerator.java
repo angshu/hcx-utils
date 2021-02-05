@@ -36,7 +36,6 @@ import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.hl7.fhir.r4.model.Type;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -336,7 +335,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
 
         if (randomBool()) {
             //presented form
-            report.getPresentedForm().add(getSurgicalReportAsAttachment());
+            report.getPresentedForm().add(getSurgicalReportAsAttachment("Surgical Pathology Report"));
             if (randomBool()) {
                 addObservvationsToBundle(jsonParser, bundle, report);
             }
@@ -345,7 +344,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         }
 
         if (randomBool()) {
-            DocumentReference docReference = getReportAsDocReference(interpreter);
+            DocumentReference docReference = getReportAsDocReference(interpreter, "Surgical Pathology Report");
             FHIRUtils.addToBundleEntry(bundle, docReference, false);
             section.getEntry().add(FHIRUtils.getReferenceToResource(docReference));
         }
@@ -366,7 +365,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
                 docAuthor = anotherDoc;
             }
         }
-        DocumentReference docReference = FHIRUtils.getReportAsDocReference(docAuthor);
+        DocumentReference docReference = FHIRUtils.getReportAsDocReference(docAuthor, "Surgical Pathology Report");
         FHIRUtils.addToBundleEntry(bundle, docReference, false);
         section.getEntry().add(FHIRUtils.getReferenceToResource(docReference));
     }

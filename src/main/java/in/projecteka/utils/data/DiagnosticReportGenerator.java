@@ -16,7 +16,6 @@ import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.Reference;
-import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
 
 import java.nio.file.Path;
@@ -135,7 +134,7 @@ public class DiagnosticReportGenerator implements DocumentGenerator {
 
         if (randomBool()) {
             //presented form
-            report.getPresentedForm().add(FHIRUtils.getSurgicalReportAsAttachment());
+            report.getPresentedForm().add(FHIRUtils.getSurgicalReportAsAttachment("Surgical Pathology Report"));
             if (randomBool()) {
                 addObservvationsToBundle(parser, bundle, report);
             }
@@ -144,7 +143,7 @@ public class DiagnosticReportGenerator implements DocumentGenerator {
         }
 
         if (randomBool()) {
-            DocumentReference docReference = FHIRUtils.getReportAsDocReference(author);
+            DocumentReference docReference = FHIRUtils.getReportAsDocReference(author, "Surgical Pathology Report");
             FHIRUtils.addToBundleEntry(bundle, docReference, false);
             section.getEntry().add(FHIRUtils.getReferenceToResource(docReference));
         }

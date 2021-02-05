@@ -4,14 +4,13 @@ import ca.uhn.fhir.context.FhirContext;
 import in.projecteka.utils.DocRequest;
 import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Vaccine;
-import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Composition;
+import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Immunization;
-import org.hl7.fhir.r4.model.Medication;
-import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.Reference;
@@ -101,20 +100,21 @@ public class ImmunizationGenerator implements DocumentGenerator {
         for (int i = 0; i < numberOfVaccines; i++) {
             int medIndex = Utils.randomInt(1, 10);
             Vaccine vaccine = Vaccine.parse((String) immunizationProps.get(String.valueOf(medIndex)));
-            Immunization immunization = FHIRUtils.getImmunization(vaccine);
+            Immunization immunization = FHIRUtils.getImmunization(vaccine, bundle.getTimestamp(), hipPrefix);
+
+            Organization organization = FhirContext.forR4().newJsonParser().parseResource(Organization.class, FHIRUtils.loadOrganization(hipPrefix));
+            FHIRUtils.addToBundleEntry(bundle, organization, true);
+            immunization.setManufacturer(FHIRUtils.getReferenceToResource(organization));
+
             immunization.setPatient(patientRef);
             FHIRUtils.addToBundleEntry(bundle, immunization, false);
             section.getEntry().add(FHIRUtils.getReferenceToResource(immunization));
         }
 
         if (Utils.randomInt(1,10) % 3 == 0) {
-            System.out.println("Including a binary resource");
-            Binary binary = new Binary();
-            binary.setId(UUID.randomUUID().toString());
-            binary.setContentType("application/pdf");
-            binary.setData(Utils.readFileContent("/sample-prescription-base64.txt"));
-            FHIRUtils.addToBundleEntry(bundle, binary, false);
-            section.getEntry().add(FHIRUtils.getReferenceToResource(binary));
+            DocumentReference docReference = FHIRUtils.getReportAsDocReference(author, "Immunization Report");
+            FHIRUtils.addToBundleEntry(bundle, docReference, false);
+            section.getEntry().add(FHIRUtils.getReferenceToResource(docReference));
         }
         return bundle;
     }
