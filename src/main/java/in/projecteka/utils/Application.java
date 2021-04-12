@@ -3,6 +3,7 @@ package in.projecteka.utils;
 import in.projecteka.utils.data.DiagnosticReportGenerator;
 import in.projecteka.utils.data.DischargeSummaryGenerator;
 import in.projecteka.utils.data.DocumentGenerator;
+import in.projecteka.utils.data.HealthDocumentRecordGenerator;
 import in.projecteka.utils.data.ImmunizationGenerator;
 import in.projecteka.utils.data.OPConsultationGenerator;
 import in.projecteka.utils.data.PrescriptionGenerator;
@@ -19,13 +20,14 @@ import java.util.List;
 import java.util.Map;
 
 public class Application {
-    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP", "DS", "IR");
+    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP", "DS", "IR", "HD");
     private static final Map<String, DocumentGenerator> generators = new HashMap<>() {{
         put("PR", new PrescriptionGenerator());
         put("DR", new DiagnosticReportGenerator());
         put("OP", new OPConsultationGenerator());
         put("DS", new DischargeSummaryGenerator());
         put("IR", new ImmunizationGenerator());
+        put("HD", new HealthDocumentRecordGenerator());
     }};
 
     public static void main(String[] args) throws Exception {
@@ -90,7 +92,7 @@ public class Application {
                 return type.toUpperCase();
             }
         }
-        System.out.println("Please provide Type, possible values: PR, DR, OP, DS");
+        System.out.println("Please provide Type, possible values: PR, DR, OP, DS, IR, HD");
         return null;
     }
 

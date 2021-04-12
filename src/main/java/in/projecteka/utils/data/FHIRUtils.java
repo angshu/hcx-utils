@@ -157,6 +157,15 @@ public class FHIRUtils {
         return type;
     }
 
+    public static CodeableConcept getHealthDocumentRecordType() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode("419891008");
+        coding.setDisplay("Record artifact");
+        return type;
+    }
+
     static CodeableConcept getPrescriptionSectionType() {
         CodeableConcept prescriptionType = getPrescriptionType();
         prescriptionType.getCodingFirstRep().setDisplay("Prescription");
