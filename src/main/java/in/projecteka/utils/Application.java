@@ -2,13 +2,14 @@ package in.projecteka.utils;
 
 import in.projecteka.utils.data.DiagnosticReportGenerator;
 import in.projecteka.utils.data.DischargeSummaryGenerator;
-import in.projecteka.utils.data.DocumentGenerator;
+import in.projecteka.utils.common.DocumentGenerator;
 import in.projecteka.utils.data.HealthDocumentRecordGenerator;
 import in.projecteka.utils.data.ImmunizationGenerator;
 import in.projecteka.utils.data.OPConsultationGenerator;
 import in.projecteka.utils.data.PrescriptionGenerator;
 import in.projecteka.utils.data.Utils;
 import in.projecteka.utils.data.WellnessRecordGenerator;
+import in.projecteka.utils.hcx.HcxCoverageEligibilityRequestGenerator;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,9 +20,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class Application {
-    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP", "DS", "IR", "HD", "WR");
+    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP", "DS", "IR", "HD", "WR", "CER");
     private static final Map<String, DocumentGenerator> generators = new HashMap<>() {{
         put("PR", new PrescriptionGenerator());
         put("DR", new DiagnosticReportGenerator());
@@ -30,30 +32,24 @@ public class Application {
         put("IR", new ImmunizationGenerator());
         put("HD", new HealthDocumentRecordGenerator());
         put("WR", new WellnessRecordGenerator());
+        put("CER", new HcxCoverageEligibilityRequestGenerator());
     }};
 
     public static void main(String[] args) throws Exception {
-        Path location = getOutFileLocation(checkRequired("out"));
         String type = getDocumentType(checkRequired("type"));
         if (Utils.isBlank(type)) {
-            System.out.println("Type is blank. Can not generate document");
+            System.out.println("Please provide Type, possible values: PR, DR, OP, DS, IR, HD, WR, CER");
             return;
         }
-        String patientName = getPatientName(checkRequired("name"));
-        Date fromDate = getFromDate(checkRequired("fromDate"));
-        int number = getNumerOfInstances(checkRequired("number"));
-        String hip = getHip(checkRequired("hip"));
-        String patientId = checkOptional("id");
-
         DocRequest request =
                 DocRequest.builder()
-                        .patientName(patientName)
-                        .fromDate(fromDate)
-                        .outPath(location)
-                        .hipPrefix(hip)
-                        .number(number)
-                        .patientId(patientId)
                         .type(type)
+                        .patientId(checkOptional("id").orElse(null))
+                        .patientName(checkOptional("name").orElseGet(Application::defaultPatient))
+                        .provName(checkOptional("hip").orElseGet(Application::defaultHip))
+                        .fromDate(getFromDate(checkOptional("fromDate")))
+                        .number(Integer.valueOf(checkOptional("number").orElseGet(Application::defaultInstanceNumber)))
+                        .outPath(Paths.get(checkOptional("out").orElseGet(Application::defaultOutputLocation)))
                         .build();
         DocumentGenerator documentGenerator = generators.get(type);
         documentGenerator.init();
@@ -64,66 +60,53 @@ public class Application {
         }
     }
 
-    private static String getHip(String hip) {
-        if (Utils.isBlank(hip)) {
-            System.out.println("hip not provided. Defaulting to max");
-            return "max";
-        }
-        return hip;
+    private static String defaultHip() {
+        System.out.println("Defaulting Provider *hip* to max");
+        return "max";
     }
 
-    private static String getPatientName(String name) {
-        if (Utils.isBlank(name)) {
-            System.out.println("name not provided. Defaulting to navjot");
-            return "navjot";
-        }
-        return name;
+    private static String defaultPatient() {
+        System.out.println("Defaulting Patient *name* to navjot");
+        return "navjot";
     }
 
-    private static Path getOutFileLocation(String out) {
-        if (Utils.isBlank(out)) {
-            System.out.println("out path not provided. Defaulting to /tmp");
-            return Paths.get("/tmp/test");
-        }
-        return Paths.get(out);
+    private static String defaultOutputLocation() {
+        System.out.println("Defaulting path *out* to /tmp");
+        return "/tmp";
     }
 
-    private static String getDocumentType(String type) {
-        if (!Utils.isBlank(type)) {
-            if (supportedTypes.contains(type.toUpperCase())) {
-                return type.toUpperCase();
-            }
-        }
-        System.out.println("Please provide Type, possible values: PR, DR, OP, DS, IR, HD, WR");
-        return null;
+    private static String defaultInstanceNumber() {
+        System.out.println("Defaulting instances *number* to 1");
+        return "1";
     }
 
-    private static int getNumerOfInstances(String number) {
-        if (Utils.isBlank(number)) {
-            System.out.println("number is blank. Defaulting to 1.");
-            return 1;
-        }
-        return Integer.parseInt(number);
+    private static String getDocumentType(Optional<String> type) {
+        return supportedTypes.contains(type.get().toUpperCase()) ? type.get().toUpperCase() : null;
     }
 
-    private static Date getFromDate(String fromDate) throws ParseException {
-        if (Utils.isBlank(fromDate)) {
-            System.out.println("fromDate is blank. Defaulting to today's date.");
+    private static Date getFromDate(Optional<String> fromDate) throws ParseException {
+        if (fromDate.isEmpty()) {
+            System.out.println("*fromDate* is blank. Defaulting to today's date.");
             return new Date();
         }
-        Date date = new SimpleDateFormat("yyyy-MM-dd").parse(fromDate);
+
+        if (Utils.isBlank(fromDate.get())) {
+            System.out.println("*fromDate* is blank. Defaulting to today's date.");
+            return new Date();
+        }
+        Date date = new SimpleDateFormat("yyyy-MM-dd").parse(fromDate.get());
         return date;
     }
 
-    private static String checkRequired(String name) throws Exception {
+    private static Optional<String> checkRequired(String name) throws Exception {
         String property = System.getProperty(name);
         if (Utils.isBlank(property)) {
             System.out.println(String.format("Required property [%s] not set.", name));
         }
-        return property;
+        return Optional.ofNullable(property);
     }
 
-    private static String checkOptional(String name) throws Exception {
-        return System.getProperty(name);
+    private static Optional<String> checkOptional(String name) throws Exception {
+        return Optional.ofNullable(System.getProperty(name));
     }
 }

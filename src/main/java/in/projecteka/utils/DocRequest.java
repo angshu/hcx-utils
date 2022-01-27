@@ -13,7 +13,7 @@ public class DocRequest {
     private String patientId;
     private Date fromDate;
     private int number;
-    private String hipPrefix;
+    private String provName;
     private Path outPath;
     private String type;
 }

@@ -3,6 +3,7 @@ package in.projecteka.utils.data;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import in.projecteka.utils.DocRequest;
+import in.projecteka.utils.common.DocumentGenerator;
 import in.projecteka.utils.data.model.SimpleDiagnosticTest;
 import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Obs;
@@ -47,7 +48,7 @@ public class DiagnosticReportGenerator implements DocumentGenerator {
         LocalDateTime dateTime = request.getFromDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         for (int i = 0; i < request.getNumber(); i++) {
             Date date = Utils.getNextDate(dateTime, i);
-            Bundle bundle = createDiagnosticReportBundle(date, request.getPatientName(), request.getHipPrefix(), fhirContext.newJsonParser(), request.getPatientId());
+            Bundle bundle = createDiagnosticReportBundle(date, request.getPatientName(), request.getProvName(), fhirContext.newJsonParser(), request.getPatientId());
             String encodedString = fhirContext.newJsonParser().encodeResourceToString(bundle);
             List<Bundle.BundleEntryComponent> patientEntries =
                     bundle.getEntry().stream()
@@ -55,7 +56,7 @@ public class DiagnosticReportGenerator implements DocumentGenerator {
                             .collect(Collectors.toList());
             Bundle.BundleEntryComponent patientEntry = patientEntries.get(0);
             String fileName = String.format("%s%sDiagnosticReportDoc%s.json",
-                    request.getHipPrefix().toUpperCase(),
+                    request.getProvName().toUpperCase(),
                     patientEntry.getResource().getId(),
                     Utils.formatDate(date, "yyyyMMdd"));
             Path path = Paths.get(request.getOutPath().toString(), fileName);

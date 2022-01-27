@@ -2,6 +2,7 @@ package in.projecteka.utils.data;
 
 import ca.uhn.fhir.context.FhirContext;
 import in.projecteka.utils.DocRequest;
+import in.projecteka.utils.common.DocumentGenerator;
 import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Vaccine;
 import org.hl7.fhir.r4.model.Bundle;
@@ -42,7 +43,7 @@ public class ImmunizationGenerator implements DocumentGenerator {
         LocalDateTime dateTime = request.getFromDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         for (int i = 0; i < request.getNumber(); i++) {
             Date date = Utils.getNextDate(dateTime, i);
-            Bundle bundle = createImmunizationBundle(date, request.getPatientName(), request.getHipPrefix(), request.getPatientId());
+            Bundle bundle = createImmunizationBundle(date, request.getPatientName(), request.getProvName(), request.getPatientId());
             String encodedString = fhirContext.newJsonParser().encodeResourceToString(bundle);
             List<Bundle.BundleEntryComponent> patientEntries =
                     bundle.getEntry().stream()
@@ -50,7 +51,7 @@ public class ImmunizationGenerator implements DocumentGenerator {
                             .collect(Collectors.toList());
             Bundle.BundleEntryComponent patientEntry = patientEntries.get(0);
             String fileName = String.format("%s%sImmunizationDoc%s.json",
-                    request.getHipPrefix().toUpperCase(),
+                    request.getProvName().toUpperCase(),
                     patientEntry.getResource().getId(),
                     Utils.formatDate(date, "yyyyMMdd"));
             Path path = Paths.get(request.getOutPath().toString(), fileName);

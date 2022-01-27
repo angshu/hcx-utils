@@ -3,6 +3,7 @@ package in.projecteka.utils.data;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import in.projecteka.utils.DocRequest;
+import in.projecteka.utils.common.DocumentGenerator;
 import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Medicine;
 import in.projecteka.utils.data.model.Obs;
@@ -54,7 +55,7 @@ import static in.projecteka.utils.data.FHIRUtils.getReportAsDocReference;
 import static in.projecteka.utils.data.FHIRUtils.getSurgicalReportAsAttachment;
 import static in.projecteka.utils.data.Utils.randomBool;
 
-public class OPConsultationGenerator implements  DocumentGenerator {
+public class OPConsultationGenerator implements DocumentGenerator {
     private Properties doctors;
     private Properties patients;
     private Properties medicationProps;
@@ -72,7 +73,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         LocalDateTime dateTime = request.getFromDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         for (int i = 0; i < request.getNumber(); i++) {
             Date docDate = getCompositionDate(dateTime, i);
-            Bundle bundle = createOPConsultationBundle(docDate, request.getPatientName(), request.getHipPrefix(), fhirContext.newJsonParser(), request.getPatientId());
+            Bundle bundle = createOPConsultationBundle(docDate, request.getPatientName(), request.getProvName(), fhirContext.newJsonParser(), request.getPatientId());
             String encodedString = fhirContext.newJsonParser().encodeResourceToString(bundle);
             List<Bundle.BundleEntryComponent> patientEntries =
                     bundle.getEntry().stream()
@@ -92,7 +93,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
 
     private Path getFileSavePath(DocRequest request, Date date, Bundle.BundleEntryComponent patientEntry) {
         String fileName = String.format("%s%s" + getDocBasicName() + "%s.json",
-                request.getHipPrefix().toUpperCase(),
+                request.getProvName().toUpperCase(),
                 patientEntry.getResource().getId(),
                 Utils.formatDate(date, "yyyyMMdd"));
         return Paths.get(request.getOutPath().toString(), fileName);

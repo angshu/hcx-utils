@@ -1,4 +1,4 @@
-package in.projecteka.utils.data;
+package in.projecteka.utils.common;
 
 import in.projecteka.utils.DocRequest;
 
