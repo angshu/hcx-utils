@@ -4,15 +4,13 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import in.projecteka.utils.DocRequest;
 import in.projecteka.utils.common.DocumentGenerator;
-import in.projecteka.utils.data.FHIRUtils;
-import in.projecteka.utils.data.Utils;
+import in.projecteka.utils.common.FHIRUtils;
+import in.projecteka.utils.common.Utils;
 import lombok.SneakyThrows;
 import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.CodeableConcept;
-import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Composition;
+import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.CoverageEligibilityRequest;
-import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
@@ -22,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -72,7 +71,7 @@ public class HcxCoverageEligibilityRequestGenerator implements DocumentGenerator
         //Create bundle and other resources like patinet and provider organization
         Bundle bundle = FHIRUtils.createBundle(date, hipPrefix);
         Patient patientResource = FHIRUtils.getPatientResource(patientName, patientId, patients);
-        patientResource.addIdentifier(createInsurerIdentifier("http://gicofIndia.com", "BEN-101"));
+        patientResource.addIdentifier(HcxFhirUtils. createInsurerIdentifier("http://gicofIndia.com", "BEN-101"));
 
         Reference patientRef = FHIRUtils.getReferenceToPatient(patientResource);
         //Practitioner author = FHIRUtils.createAuthor(hipPrefix, doctors);
@@ -89,7 +88,7 @@ public class HcxCoverageEligibilityRequestGenerator implements DocumentGenerator
         composition.addAuthor().setResource(author);
 
         FHIRUtils.addToBundleEntry(bundle, composition, false);
-        FHIRUtils.addToBundleEntry(bundle, author, false);
+        FHIRUtils.addToBundleEntry(bundle, author, true);
         FHIRUtils.addToBundleEntry(bundle, patientResource, false);
 
         composition.setSubject(patientRef);
@@ -98,55 +97,46 @@ public class HcxCoverageEligibilityRequestGenerator implements DocumentGenerator
         section.setTitle("# Eligibility Request");
         section.setCode(HcxFhirUtils.getCoverageEligibilityResourceType()); //TODO IG - Same as Composition.type?
         CoverageEligibilityRequest cer = new CoverageEligibilityRequest();
-        cer.setId(UUID.randomUUID().toString());
-        cer.setStatus(CoverageEligibilityRequest.EligibilityRequestStatus.ACTIVE);
+        cer.setId(UUID.randomUUID().toString()); //request id
+
         section.getEntry().add(FHIRUtils.getReferenceToResource(cer));
         FHIRUtils.addToBundleEntry(bundle, cer, false);
 
 
-        //report.setSubject(FHIRUtils.getReferenceToPatient(patientResource));
+        //load the eligibility request object
+        cer.setStatus(CoverageEligibilityRequest.EligibilityRequestStatus.ACTIVE);
+        cer.addPurpose(CoverageEligibilityRequest.EligibilityRequestPurpose.DISCOVERY);
+        cer.addIdentifier(FHIRUtils.getIdentifier(cer.getId(), hipPrefix, "coverage-eligibility-request"));
+        cer.setPatient(patientRef); //ref to patient resource
 
-//        report.setIssued(date);
-//        if (randomBool()) {
-//            report.setEffective(FHIRUtils.getDateTimeType(date));
-//        }
-//
-//        Organization organization = fhirParser.parseResource(Organization.class, FHIRUtils.loadOrganization(hipPrefix));
-//        FHIRUtils.addToBundleEntry(bundle, organization, true);
-//        report.setPerformer(Collections.singletonList(FHIRUtils.getReferenceToResource(organization)));
-//
-//        Practitioner interpreter = author;
-//        if (randomBool()) {
-//            interpreter = FHIRUtils.createAuthor(hipPrefix, doctors);
-//            Practitioner doctor = (Practitioner) FHIRUtils.findResourceInBundleById(bundle, ResourceType.Practitioner, interpreter.getId());
-//            if (doctor == null) {
-//                FHIRUtils.addToBundleEntry(bundle, interpreter, false);
-//            } else {
-//                interpreter = doctor;
-//            }
-//        }
-//        report.setResultsInterpreter(Collections.singletonList(FHIRUtils.getReferenceToResource(interpreter)));
-//        report.setCode(FHIRUtils.getDiagnosticTestCode(SimpleDiagnosticTest.getRandomTest()));
-//
-//        if (randomBool()) {
-//            report.setConclusion("Refer to Doctor. To be correlated with further study.");
-//        }
-//
-//
-//        if (randomBool()) {
-//            DocumentReference docReference = FHIRUtils.getReportAsDocReference(author, "Surgical Pathology Report");
-//            FHIRUtils.addToBundleEntry(bundle, docReference, false);
-//            section.getEntry().add(FHIRUtils.getReferenceToResource(docReference));
-//        }
+        //set service period
+        Date start = Date.from(LocalDateTime.now().minusDays(1L).atZone(ZoneId.systemDefault()).toInstant());
+        Date end = Date.from(LocalDateTime.now().plusDays(1L).atZone(ZoneId.systemDefault()).toInstant());
+        cer.setServiced(FHIRUtils.newPeriod(start, end));
+
+        cer.setCreated(new Date());
+        cer.setProvider(FHIRUtils.getReferenceToResource(author));
+        Organization insurer = fhirParser.parseResource(Organization.class, FHIRUtils.loadOrganization("gic"));
+        FHIRUtils.addToBundleEntry(bundle, insurer, true);
+        Reference insurerRef = FHIRUtils.getReferenceToResource(insurer);
+        cer.setInsurer(insurerRef); //set insurer
+
+        Coverage coverage = new Coverage();
+        coverage.setId(UUID.randomUUID().toString());
+        coverage.addIdentifier(FHIRUtils.getIdentifier("policy-"+patientResource.getId(), "gicofIndia", "policies"));
+        coverage.setStatus(Coverage.CoverageStatus.ACTIVE);
+        coverage.setSubscriber(patientRef); //if not the patient, then a different patient  resource should be created and embedded onto the bundle, with the right identifier
+        coverage.setSubscriberId("SN-"+patientResource.getId()); //
+        coverage.setBeneficiary(patientRef);
+        coverage.setRelationship(HcxFhirUtils.getRelationship("self"));
+        coverage.setPayor(Arrays.asList(insurerRef));
+        FHIRUtils.addToBundleEntry(bundle, coverage, false);
+
+        CoverageEligibilityRequest.InsuranceComponent insuranceComponent = cer.addInsurance();
+        insuranceComponent.setFocal(true);
+        insuranceComponent.setCoverage(FHIRUtils.getReferenceToResource(coverage));
 
         return bundle;
     }
 
-    private Identifier createInsurerIdentifier(String insurerDomain, String value) {
-        Identifier identifier = new Identifier();
-        identifier.setSystem(String.format("%s/beneficiaries", insurerDomain));
-        identifier.setValue(value);
-        identifier.setType(new CodeableConcept(new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "SN","Subscriber Number")));
-        return identifier;
-    }
 }

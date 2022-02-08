@@ -1,6 +1,6 @@
 package in.projecteka.utils.data.model;
 
-import in.projecteka.utils.data.Utils;
+import in.projecteka.utils.common.Utils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 

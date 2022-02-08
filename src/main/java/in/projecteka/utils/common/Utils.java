@@ -1,4 +1,4 @@
-package in.projecteka.utils.data;
+package in.projecteka.utils.common;
 
 import org.hl7.fhir.r4.model.Meta;
 

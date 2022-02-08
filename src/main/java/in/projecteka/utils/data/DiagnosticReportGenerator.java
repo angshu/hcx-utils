@@ -4,6 +4,8 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import in.projecteka.utils.DocRequest;
 import in.projecteka.utils.common.DocumentGenerator;
+import in.projecteka.utils.common.FHIRUtils;
+import in.projecteka.utils.common.Utils;
 import in.projecteka.utils.data.model.SimpleDiagnosticTest;
 import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Obs;
@@ -30,7 +32,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static in.projecteka.utils.data.Utils.randomBool;
+import static in.projecteka.utils.common.Utils.randomBool;
 
 public class DiagnosticReportGenerator implements DocumentGenerator {
     private Properties doctors;

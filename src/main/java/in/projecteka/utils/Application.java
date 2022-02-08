@@ -7,11 +7,10 @@ import in.projecteka.utils.data.HealthDocumentRecordGenerator;
 import in.projecteka.utils.data.ImmunizationGenerator;
 import in.projecteka.utils.data.OPConsultationGenerator;
 import in.projecteka.utils.data.PrescriptionGenerator;
-import in.projecteka.utils.data.Utils;
+import in.projecteka.utils.common.Utils;
 import in.projecteka.utils.data.WellnessRecordGenerator;
 import in.projecteka.utils.hcx.HcxCoverageEligibilityRequestGenerator;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

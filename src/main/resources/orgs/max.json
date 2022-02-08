@@ -5,6 +5,16 @@
   "alias": [
     "Max"
   ],
+  "identifier": [
+    {
+      "system": "http://abdm.gov.in/facilities",
+      "value": "HFR-ID-FOR-MAX-DELHI"
+    },
+    {
+      "system": "http://irdai.gov.in/facilities",
+      "value": "IRDA-ID-FOR-MAX-DELHI"
+    }
+  ],
   "telecom": [
     {
       "system": "phone",

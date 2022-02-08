@@ -1,5 +1,7 @@
 package in.projecteka.utils.data;
 
+import in.projecteka.utils.common.FHIRUtils;
+import in.projecteka.utils.common.Utils;
 import in.projecteka.utils.data.model.SimpleCondition;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -13,7 +15,7 @@ import org.hl7.fhir.r4.model.Type;
 import java.time.LocalDateTime;
 import java.util.Date;
 
-import static in.projecteka.utils.data.FHIRUtils.createEncounterDiagnosis;
+import static in.projecteka.utils.common.FHIRUtils.createEncounterDiagnosis;
 
 public class DischargeSummaryGenerator extends OPConsultationGenerator {
 

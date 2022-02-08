@@ -1,4 +1,4 @@
-package in.projecteka.utils.data;
+package in.projecteka.utils.common;
 
 import in.projecteka.utils.data.model.Doctor;
 import in.projecteka.utils.data.model.Vaccine;
@@ -42,19 +42,21 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static in.projecteka.utils.data.Constants.EKA_LOINC_SYSTEM;
-import static in.projecteka.utils.data.Constants.EKA_SCT_SYSTEM;
+import static in.projecteka.utils.common.Constants.EKA_ACT_SYSTEM;
+import static in.projecteka.utils.common.Constants.EKA_LOINC_SYSTEM;
+import static in.projecteka.utils.common.Constants.EKA_SCT_SYSTEM;
 import static in.projecteka.utils.common.Constants.CS_FHIR_CONDITION_CATEGORY;
 import static in.projecteka.utils.common.Constants.CS_FHIR_CONDITION_CLINICAL_STATUS;
-import static in.projecteka.utils.data.Utils.getPastDate;
-import static in.projecteka.utils.data.Utils.randomBool;
+import static in.projecteka.utils.common.Constants.HOSPITAL_SYSTEM;
+import static in.projecteka.utils.common.Utils.getPastDate;
+import static in.projecteka.utils.common.Utils.randomBool;
 
 public class FHIRUtils {
-    static Enumerations.AdministrativeGender getGender(String gender) {
+    public static Enumerations.AdministrativeGender getGender(String gender) {
         return Enumerations.AdministrativeGender.fromCode(gender);
     }
 
-    static HumanName getHumanName(String name, String prefix, String suffix) {
+    public static HumanName getHumanName(String name, String prefix, String suffix) {
         HumanName humanName = new HumanName();
         humanName.setText(name);
         if (!Utils.isBlank(prefix)) {
@@ -66,15 +68,15 @@ public class FHIRUtils {
         return humanName;
     }
 
-    public static Identifier getIdentifier(String id, String domain, String resType) {
+    public static Identifier getIdentifier(String value, String domain, String resType) {
         Identifier identifier = new Identifier();
         identifier.setSystem(getHospitalSystemForType(domain, resType));
-        identifier.setValue(id);
+        identifier.setValue(value);
         return identifier;
     }
 
     private static String getHospitalSystemForType(String hospitalDomain, String type) {
-        return String.format(Constants.HOSPITAL_SYSTEM, hospitalDomain, type);
+        return String.format(HOSPITAL_SYSTEM, hospitalDomain, type);
     }
 
     public static Bundle createBundle(Date forDate, String hipDomain) {
@@ -115,7 +117,7 @@ public class FHIRUtils {
         return patientResource;
     }
 
-    static Encounter createEncounter(String display, String encClass, Date date) {
+    public static Encounter createEncounter(String display, String encClass, Date date) {
         Encounter encounter = new Encounter();
         Period period = new Period();
         period.setStart(date);
@@ -130,70 +132,70 @@ public class FHIRUtils {
         return encounter;
     }
 
-    static CodeableConcept getDiagnosticReportType() {
+    public static CodeableConcept getDiagnosticReportType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "721981007",
                         "Diagnostic Report"));
     }
 
-    static CodeableConcept getPrescriptionType() {
+    public static CodeableConcept getPrescriptionType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "440545006",
                         "Prescription record"));
     }
 
-    static CodeableConcept getImmunizationType() {
+    public static CodeableConcept getImmunizationType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "41000179103",
                         "Immunization record"));
     }
 
     public static CodeableConcept getHealthDocumentRecordType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "419891008",
                         "Record artifact"));
     }
 
     public static CodeableConcept getWellnessRecordType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "", //TODO
                         "Wellness Record"));
     }
 
-    static CodeableConcept getPrescriptionSectionType() {
+    public static CodeableConcept getPrescriptionSectionType() {
         CodeableConcept prescriptionType = getPrescriptionType();
         prescriptionType.getCodingFirstRep().setDisplay("Prescription");
         return prescriptionType;
     }
 
-    static CodeableConcept getDocumentReferenceSectionType() {
+    public static CodeableConcept getDocumentReferenceSectionType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "371530004",
                         "Clinical consultation report"));
     }
 
-    static CodeableConcept getCarePlanSectionType() {
+    public static CodeableConcept getCarePlanSectionType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "734163000",
                         "Care Plan"));
     }
 
-    static CodeableConcept getChiefComplaintSectionType() {
+    public static CodeableConcept getChiefComplaintSectionType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "422843007",
                         "Chief Complaint Section"));
     }
-    static CodeableConcept getAllergySectionType() {
+    public static CodeableConcept getAllergySectionType() {
         return new CodeableConcept(
-                new Coding(Constants.EKA_SCT_SYSTEM,
+                new Coding(EKA_SCT_SYSTEM,
                         "722446000",
                         "Allergy Record"));
     }
@@ -238,7 +240,7 @@ public class FHIRUtils {
     public static CodeableConcept getOPConsultationType() {
         CodeableConcept type = new CodeableConcept();
         Coding coding = type.addCoding();
-        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setSystem(EKA_SCT_SYSTEM);
         coding.setCode("371530004");
         coding.setDisplay("Clinical consultation report");
         return type;
@@ -247,13 +249,13 @@ public class FHIRUtils {
     public static CodeableConcept getDischargeSummaryType() {
         CodeableConcept type = new CodeableConcept();
         Coding coding = type.addCoding();
-        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setSystem(EKA_SCT_SYSTEM);
         coding.setCode("373942005");
         coding.setDisplay("Discharge Summary Record");
         return type;
     }
 
-    static Condition getCondition(String medCondition) {
+    public static Condition getCondition(String medCondition) {
         if (Utils.randomBool()) {
             Condition condition = new Condition();
             condition.setId(UUID.randomUUID().toString());
@@ -265,7 +267,7 @@ public class FHIRUtils {
         return null;
     }
 
-    static Medication getMedication(Medicine med) {
+    public static Medication getMedication(Medicine med) {
         Medication medication = new Medication();
         medication.setId(UUID.randomUUID().toString());
         CodeableConcept concept = new CodeableConcept();
@@ -273,7 +275,7 @@ public class FHIRUtils {
             concept.setText(med.getName());
         } else {
             Coding coding = concept.addCoding();
-            coding.setSystem(Constants.EKA_ACT_SYSTEM);
+            coding.setSystem(EKA_ACT_SYSTEM);
             coding.setCode(med.getCode());
             coding.setDisplay(med.getName());
         }
@@ -281,7 +283,7 @@ public class FHIRUtils {
         return medication;
     }
 
-    static Immunization getImmunization(Vaccine vaccine, Date date, String orgPrefix) {
+    public static Immunization getImmunization(Vaccine vaccine, Date date, String orgPrefix) {
         Immunization immunization = new Immunization();
         immunization.setId(UUID.randomUUID().toString());
         CodeableConcept concept = new CodeableConcept();
@@ -289,7 +291,7 @@ public class FHIRUtils {
             concept.setText(vaccine.getName());
         } else {
             Coding coding = concept.addCoding();
-            coding.setSystem(Constants.EKA_ACT_SYSTEM);
+            coding.setSystem(EKA_ACT_SYSTEM);
             coding.setCode(vaccine.getCode());
             coding.setDisplay(vaccine.getName());
         }
@@ -302,11 +304,11 @@ public class FHIRUtils {
             immunization.setLotNumber(RandomStringUtils.randomAlphanumeric(7).toUpperCase());
         }
         int randomInt = RandomUtils.nextInt(1, 4);
-        if (randomInt == 1){
+        if (randomInt == 1) {
             PositiveIntType doseNumber = new PositiveIntType(RandomUtils.nextInt(2, 5));
             var protocolApplied = new Immunization.ImmunizationProtocolAppliedComponent(doseNumber);
             immunization.addProtocolApplied(protocolApplied);
-        }else if (randomInt == 2){
+        } else if (randomInt == 2) {
             StringType doseNumber = new StringType("2nd");
             var protocolApplied = new Immunization.ImmunizationProtocolAppliedComponent(doseNumber);
             immunization.addProtocolApplied(protocolApplied);
@@ -322,7 +324,7 @@ public class FHIRUtils {
         return immunization;
     }
 
-    static MedicationRequest createMedicationRequest(Practitioner author,
+    public static MedicationRequest createMedicationRequest(Practitioner author,
                                                      Date date,
                                                      Medicine med,
                                                      Medication medication,
@@ -373,7 +375,7 @@ public class FHIRUtils {
         return concept;
     }
 
-    static Period getPeriod(Date from, Date to) {
+    public static Period getPeriod(Date from, Date to) {
         Period period = new Period();
         period.setStart(from);
         if (to != null) {
@@ -394,7 +396,7 @@ public class FHIRUtils {
         return concept;
     }
 
-    static Attachment getSurgicalReportAsAttachment(String title) throws IOException {
+    public static Attachment getSurgicalReportAsAttachment(String title) throws IOException {
         Attachment attachment = new Attachment();
         attachment.setTitle(title);
         attachment.setContentType("application/pdf");
@@ -422,7 +424,7 @@ public class FHIRUtils {
     public static CodeableConcept getPhysicalExaminationSectionCode() {
         CodeableConcept type = new CodeableConcept();
         Coding coding = type.addCoding();
-        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setSystem(EKA_SCT_SYSTEM);
         coding.setCode("425044008");
         coding.setDisplay("Physical exam section");
         return type;
@@ -430,7 +432,7 @@ public class FHIRUtils {
     public static CodeableConcept getFollowupSectionCode() {
         CodeableConcept type = new CodeableConcept();
         Coding coding = type.addCoding();
-        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setSystem(EKA_SCT_SYSTEM);
         coding.setCode("736271009");
         coding.setDisplay("Follow up");
         return type;
@@ -438,13 +440,13 @@ public class FHIRUtils {
     public static CodeableConcept getProcedureSectionCode() {
         CodeableConcept type = new CodeableConcept();
         Coding coding = type.addCoding();
-        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setSystem(EKA_SCT_SYSTEM);
         coding.setCode("371525003");
         coding.setDisplay("Clinical procedure report");
         return type;
     }
 
-    static Appointment createAppointment(Reference participantRef, Date apptDate) {
+    public static Appointment createAppointment(Reference participantRef, Date apptDate) {
         Appointment app = new Appointment();
         app.setId(UUID.randomUUID().toString());
         app.setStart(apptDate);
@@ -468,7 +470,7 @@ public class FHIRUtils {
     public static CodeableConcept getCodeableConcept(String code, String display, String text) {
         CodeableConcept procedureCode = new CodeableConcept();
         Coding coding = procedureCode.addCoding();
-        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setSystem(EKA_SCT_SYSTEM);
         coding.setCode(code);
         coding.setDisplay(display);
         if (!Utils.isBlank(text)) {
@@ -490,7 +492,7 @@ public class FHIRUtils {
         return null;
     }
 
-    static Condition createCondition(SimpleCondition randomComplaint, Date date) {
+    public static Condition createCondition(SimpleCondition randomComplaint, Date date) {
         Condition condition = new Condition();
         condition.setId(UUID.randomUUID().toString());
         if (randomBool()) {
@@ -519,7 +521,7 @@ public class FHIRUtils {
         return condition;
     }
 
-    static Condition createEncounterDiagnosis(SimpleCondition randomComplaint, Date date) {
+    public static Condition createEncounterDiagnosis(SimpleCondition randomComplaint, Date date) {
         Condition condition = new Condition();
         condition.setId(UUID.randomUUID().toString());
         if (randomBool()) {
@@ -537,5 +539,12 @@ public class FHIRUtils {
             condition.setRecordedDate(date);
         }
         return condition;
+    }
+
+    public static Period newPeriod(Date start, Date end) {
+        Period period = new Period();
+        period.setStart(start);
+        period.setEnd(end);
+        return period;
     }
 }

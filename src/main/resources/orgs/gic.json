@@ -1,0 +1,11 @@
+{
+  "resourceType": "Organization",
+  "id": "GICOFINDIA",
+  "name": "General Insurance Corporation of India",
+  "identifier": [
+    {
+      "system": "http://irdai.gov.in/insurers",
+      "value": "112"
+    }
+  ]
+}

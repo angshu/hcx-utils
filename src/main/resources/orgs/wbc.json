@@ -5,6 +5,16 @@
   "alias": [
     "WBH", "WBC"
   ],
+  "identifier": [
+    {
+      "system": "http://abdm.gov.in/facilities",
+      "value": "HFR-ID-FOR-WBC"
+    },
+    {
+      "system": "http://irdai.gov.in/facilities",
+      "value": "IRDA-ID-FOR-WBC"
+    }
+  ],
   "telecom": [
     {
       "system": "phone",
