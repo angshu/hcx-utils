@@ -25,8 +25,8 @@ takes the following parameters
 
 ## Build from source
 ```
-# assuming running from eka-utils directory
+# assuming running from hcx-utils directory
 
-java -Dtype=PR -Dnumber=3 -DfromDate=2019-08-01 -Dname=hina -Dout=/tmp/test -jar build/libs/eka-utils-1.0-SNAPSHOT.jar 
+java -Dtype=PR -Dnumber=3 -DfromDate=2019-08-01 -Dname=hina -Dout=/tmp/test -jar build/libs/hcx-utils-1.0-SNAPSHOT.jar 
 
 ```

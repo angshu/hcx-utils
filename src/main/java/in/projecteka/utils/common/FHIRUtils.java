@@ -59,6 +59,13 @@ public class FHIRUtils {
     public static HumanName getHumanName(String name, String prefix, String suffix) {
         HumanName humanName = new HumanName();
         humanName.setText(name);
+        String[] nameParts = name.split(" ");
+        if (nameParts.length > 0) {
+            humanName.addGiven(nameParts[0].trim());
+            if (nameParts.length > 0) {
+                humanName.setFamily(nameParts[1].trim());
+            }
+        }
         if (!Utils.isBlank(prefix)) {
             humanName.setPrefix(Collections.singletonList(new StringType(prefix)));
         }
@@ -71,6 +78,12 @@ public class FHIRUtils {
     public static Identifier getIdentifier(String value, String domain, String resType) {
         Identifier identifier = new Identifier();
         identifier.setSystem(getHospitalSystemForType(domain, resType));
+        identifier.setValue(value);
+        return identifier;
+    }
+    public static Identifier getIdentifier(String system, String value) {
+        Identifier identifier = new Identifier();
+        identifier.setSystem(system);
         identifier.setValue(value);
         return identifier;
     }

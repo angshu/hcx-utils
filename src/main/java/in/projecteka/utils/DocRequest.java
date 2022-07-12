@@ -16,4 +16,5 @@ public class DocRequest {
     private String provName;
     private Path outPath;
     private String type;
+    private Path csvPath;
 }

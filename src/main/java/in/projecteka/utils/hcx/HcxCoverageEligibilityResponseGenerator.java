@@ -27,7 +27,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class HcxCoverageEligibilityRequestGenerator implements DocumentGenerator {
+public class HcxCoverageEligibilityResponseGenerator implements DocumentGenerator {
     private Properties doctors;
     private Properties patients;
 
@@ -72,10 +72,6 @@ public class HcxCoverageEligibilityRequestGenerator implements DocumentGenerator
         Bundle bundle = FHIRUtils.createBundle(date, hipPrefix);
         Patient patientResource = FHIRUtils.getPatientResource(patientName, patientId, patients);
         patientResource.addIdentifier(HcxFhirUtils. createInsurerIdentifier("http://gicofIndia.com", "BEN-101"));
-        if (Utils.randomBool()) {
-            patientResource.addIdentifier(FHIRUtils.getIdentifier(
-                    "http://abdm.gov.in/patients", String.format("%s@abdm", patientResource.getNameFirstRep().getGiven().get(0))));
-        }
 
         Reference patientRef = FHIRUtils.getReferenceToPatient(patientResource);
         //Practitioner author = FHIRUtils.createAuthor(hipPrefix, doctors);

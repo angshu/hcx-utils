@@ -10,6 +10,8 @@ import in.projecteka.utils.data.PrescriptionGenerator;
 import in.projecteka.utils.common.Utils;
 import in.projecteka.utils.data.WellnessRecordGenerator;
 import in.projecteka.utils.hcx.HcxCoverageEligibilityRequestGenerator;
+import in.projecteka.utils.hcx.HcxCoverageEligibilityResponseGenerator;
+import in.projecteka.utils.hcx.HcxValueSet;
 
 import java.nio.file.Paths;
 import java.text.ParseException;
@@ -22,7 +24,6 @@ import java.util.Map;
 import java.util.Optional;
 
 public class Application {
-    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP", "DS", "IR", "HD", "WR", "CER");
     private static final Map<String, DocumentGenerator> generators = new HashMap<>() {{
         put("PR", new PrescriptionGenerator());
         put("DR", new DiagnosticReportGenerator());
@@ -31,13 +32,16 @@ public class Application {
         put("IR", new ImmunizationGenerator());
         put("HD", new HealthDocumentRecordGenerator());
         put("WR", new WellnessRecordGenerator());
-        put("CER", new HcxCoverageEligibilityRequestGenerator());
+        put("CEREQ", new HcxCoverageEligibilityRequestGenerator());
+        put("CERES", new HcxCoverageEligibilityResponseGenerator());
+        put("VS", new HcxValueSet());
     }};
+    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP", "DS", "IR", "HD", "WR", "CEREQ", "VS");
 
     public static void main(String[] args) throws Exception {
         String type = getDocumentType(checkRequired("type"));
         if (Utils.isBlank(type)) {
-            System.out.println("Please provide Type, possible values: PR, DR, OP, DS, IR, HD, WR, CER");
+            System.out.println("Please provide Type, possible values: PR, DR, OP, DS, IR, HD, WR, CEREQ");
             return;
         }
         DocRequest request =
@@ -49,6 +53,7 @@ public class Application {
                         .fromDate(getFromDate(checkOptional("fromDate")))
                         .number(Integer.valueOf(checkOptional("number").orElseGet(Application::defaultInstanceNumber)))
                         .outPath(Paths.get(checkOptional("out").orElseGet(Application::defaultOutputLocation)))
+                        .csvPath(Paths.get(checkRequired("csv").orElseThrow(() -> new RuntimeException("Can not run generator"))))
                         .build();
         DocumentGenerator documentGenerator = generators.get(type);
         documentGenerator.init();
@@ -58,7 +63,6 @@ public class Application {
             e.printStackTrace();
         }
     }
-
     private static String defaultHip() {
         System.out.println("Defaulting Provider *hip* to max");
         return "max";
